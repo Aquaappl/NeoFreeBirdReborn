@@ -687,6 +687,45 @@ static NSArray<BHTLikedMediaItem*>* BHTMediaItemsFromSections(NSArray* sections)
     return fabs(CGRectGetWidth(newBounds) - CGRectGetWidth(self.collectionView.bounds)) > 0.5;
 }
 
+- (void)invalidatePreservingVisibleAnchor {
+    UICollectionView* collection = self.collectionView;
+    CGFloat viewportTop = collection.contentOffset.y;
+    UICollectionViewLayoutAttributes* anchor = nil;
+    CGFloat nearest = CGFLOAT_MAX;
+    for (NSIndexPath* path in collection.indexPathsForVisibleItems) {
+        UICollectionViewLayoutAttributes* candidate =
+            [self layoutAttributesForItemAtIndexPath:path];
+        if (!candidate) continue;
+        CGFloat distance = fabs(CGRectGetMinY(candidate.frame) - viewportTop);
+        if (distance < nearest) {
+            nearest = distance;
+            anchor = candidate;
+        }
+    }
+    self.geometryDirty = YES;
+    [self prepareLayout];
+    BHTWaterfallInvalidationContext* context = [BHTWaterfallInvalidationContext new];
+    context.geometryAlreadyPrepared = YES;
+    [context invalidateItemsAtIndexPaths:[self.attributes valueForKey:@"indexPath"]];
+    UICollectionViewLayoutAttributes* updated = anchor
+        ? [self layoutAttributesForItemAtIndexPath:anchor.indexPath] : nil;
+    // UIKit applies this delta as part of layout, preserving an active pan or
+    // deceleration. Calling setContentOffset here interrupts scrolling.
+    if (updated && viewportTop > -collection.adjustedContentInset.top + 0.5) {
+        CGFloat delta = CGRectGetMinY(updated.frame) - CGRectGetMinY(anchor.frame);
+        CGFloat minimum = -collection.adjustedContentInset.top;
+        CGFloat maximum = MAX(minimum, self.contentSize.height -
+            CGRectGetHeight(collection.bounds) + collection.adjustedContentInset.bottom);
+        if (isfinite(delta)) {
+            context.contentOffsetAdjustment = CGPointMake(
+                0, MIN(maximum, MAX(minimum, viewportTop + delta)) - viewportTop);
+            BHTIncrementLikesDiagnostic(@"waterfallAnchorPreservations");
+        }
+    }
+    [self invalidateLayoutWithContext:context];
+    [collection layoutIfNeeded];
+}
+
 @end
 
 
@@ -1568,44 +1607,6 @@ static UIMenu* BHTLikedMediaContextMenu(
     BHTCancelMediaImageRequest(self.imageRequest);
 }
 
-- (void)invalidatePreservingVisibleAnchor {
-    UICollectionView* collection = self.collectionView;
-    CGFloat viewportTop = collection.contentOffset.y;
-    UICollectionViewLayoutAttributes* anchor = nil;
-    CGFloat nearest = CGFLOAT_MAX;
-    for (NSIndexPath* path in collection.indexPathsForVisibleItems) {
-        UICollectionViewLayoutAttributes* candidate =
-            [self layoutAttributesForItemAtIndexPath:path];
-        if (!candidate) continue;
-        CGFloat distance = fabs(CGRectGetMinY(candidate.frame) - viewportTop);
-        if (distance < nearest) {
-            nearest = distance;
-            anchor = candidate;
-        }
-    }
-    self.geometryDirty = YES;
-    [self prepareLayout];
-    BHTWaterfallInvalidationContext* context = [BHTWaterfallInvalidationContext new];
-    context.geometryAlreadyPrepared = YES;
-    [context invalidateItemsAtIndexPaths:[self.attributes valueForKey:@"indexPath"]];
-    UICollectionViewLayoutAttributes* updated = anchor
-        ? [self layoutAttributesForItemAtIndexPath:anchor.indexPath] : nil;
-    // UIKit applies this delta as part of layout, preserving an active pan or
-    // deceleration. Calling setContentOffset here interrupts scrolling.
-    if (updated && viewportTop > -collection.adjustedContentInset.top + 0.5) {
-        CGFloat delta = CGRectGetMinY(updated.frame) - CGRectGetMinY(anchor.frame);
-        CGFloat minimum = -collection.adjustedContentInset.top;
-        CGFloat maximum = MAX(minimum, self.contentSize.height -
-            CGRectGetHeight(collection.bounds) + collection.adjustedContentInset.bottom);
-        if (isfinite(delta)) {
-            context.contentOffsetAdjustment = CGPointMake(
-                0, MIN(maximum, MAX(minimum, viewportTop + delta)) - viewportTop);
-            BHTIncrementLikesDiagnostic(@"waterfallAnchorPreservations");
-        }
-    }
-    [self invalidateLayoutWithContext:context];
-    [collection layoutIfNeeded];
-}
 
 @end
 
