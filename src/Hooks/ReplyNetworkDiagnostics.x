@@ -251,7 +251,7 @@ didCompleteWithError:(NSError*)error {
     NSString* version = [NSBundle.mainBundle
         objectForInfoDictionaryKey:@"CFBundleShortVersionString"];
     if (![version isKindOfClass:NSString.class] ||
-        ![version isEqualToString:@"12.9"]) {
+        ![version isEqualToString:@"12.24.1"]) {
         return;
     }
 

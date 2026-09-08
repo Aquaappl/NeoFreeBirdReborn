@@ -28,7 +28,7 @@ on:
         default: "15.0"
         required: true
       decrypted_ipa_url:
-        description: "Direct URL of an authorized decrypted X 12.9 IPA (only needed for sideloaded/TrollStore)"
+        description: "Direct URL of an authorized decrypted X 12.24.1 IPA (only needed for sideloaded/TrollStore)"
         default: ""
         required: false
         type: string
@@ -40,6 +40,7 @@ on:
         options:
           - rootfull
           - sideloaded
+          - sideload-payload
           - trollstore
           - rootless
       commit_id:
@@ -112,6 +113,11 @@ jobs:
           python3 -m py_compile main/branding/ipa_branding.py main/branding/build_twitter_bird_glyph.py main/branding/source_smoke_test.py
           python3 main/branding/source_smoke_test.py
           python3 main/branding/smoke_test.py
+
+      - name: Test sidebar persistence
+        run: |
+          swiftc -D BHT_SIDEBAR_TESTS main/src/Sidebar/BHTSidebarRuntime.swift main/tests/SidebarRuntimeTests.swift -o "$RUNNER_TEMP/sidebar-tests"
+          "$RUNNER_TEMP/sidebar-tests"
 
       - name: Restore Theos Toolchain
         id: theos-cache
@@ -188,8 +194,8 @@ jobs:
           fi
           X_VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$APP_PLIST")
           X_BUILD=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$APP_PLIST")
-          if [ "$X_VERSION" != "12.9" ]; then
-            echo "This compatibility branch targets X 12.9; received X $X_VERSION (build $X_BUILD)." >&2
+          if [ "$X_VERSION" != "12.24.1" ] || [ "$X_BUILD" != "1" ]; then
+            echo "This compatibility branch targets X 12.24.1 build 1; received X $X_VERSION (build $X_BUILD)." >&2
             exit 1
           fi
           echo "X_VERSION=${X_VERSION}" >> "$GITHUB_ENV"
@@ -220,7 +226,7 @@ jobs:
           git -C main submodule update --init --depth 1 --recursive \
             deps/flex/upstream
 
-          if [[ "${BUILD_DEPLOY_FORMAT}" == "sideloaded" ]]; then
+          if [[ "${BUILD_DEPLOY_FORMAT}" == "sideloaded" || "${BUILD_DEPLOY_FORMAT}" == "sideload-payload" ]]; then
             git -C main submodule update --init --depth 1 --recursive \
               deps/zxPluginsInject/upstream
           fi

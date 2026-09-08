@@ -662,7 +662,7 @@ void BHTInstallReplyWorkflowDiagnosticObservers(void) {
     NSString* version = [NSBundle.mainBundle
         objectForInfoDictionaryKey:@"CFBundleShortVersionString"];
     if (![version isKindOfClass:NSString.class] ||
-        ![version isEqualToString:@"12.9"]) {
+        ![version isEqualToString:@"12.24.1"]) {
         return;
     }
 
@@ -1474,7 +1474,7 @@ NSURL* BHTCompatibilityReportURL(void) {
     NSURL* caches = [[[NSFileManager defaultManager]
         URLsForDirectory:NSCachesDirectory
                inDomains:NSUserDomainMask] firstObject];
-    return [caches URLByAppendingPathComponent:@"BHTwitter-X12.9-Compatibility.json"];
+    return [caches URLByAppendingPathComponent:@"BHTwitter-X12.24.1-Compatibility.json"];
 }
 
 static NSDictionary* BHTProbe(NSString* feature, NSString* className,
@@ -1542,7 +1542,7 @@ static NSArray* BHTRuntimeProbes(void) {
         BHTProbe(@"mediaActions", @"TFNMenuSheetViewController", @"initWithTitle:actionItems:", NO),
         BHTProbe(@"mediaActions", @"TFNMenuSheetViewController", @"tfnPresentedCustomPresentFromViewController:animated:completion:", NO),
 
-        BHTProbe(@"dmDownloads", @"DMConversation.MessageAttachmentView", @"layoutSubviews", NO),
+        BHTProbe(@"dmDownloads", @"ChatConversation.MessageAttachmentView", @"layoutSubviews", NO),
         BHTProbe(@"dmDownloads", @"DMConversation.MessageSaveActionPlugin", @"init", NO),
         BHTProbe(@"dmDownloads", @"TweetMediaAttachments.MultiMediaView", @"inlineMediaInfos", NO),
         BHTProbe(@"messages", @"_TtC14DMConversation26ConversationViewController", @"viewDidLoad", NO),

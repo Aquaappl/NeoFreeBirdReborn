@@ -230,12 +230,12 @@
 @class DownloadInlineButton;
 
 // DM media message container (DMConversation.MessageAttachmentView)
-@interface _TtC14DMConversation21MessageAttachmentView : UIView
+@interface _TtC16ChatConversation21MessageAttachmentView : UIView
 @property (nonatomic, strong) UIContextMenuInteraction* downloadMenuInteraction;
 @property (nonatomic, strong) DownloadInlineButton* downloadHandler;
 @end
 
-@interface _TtC14DMConversation21MessageAttachmentView () <
+@interface _TtC16ChatConversation21MessageAttachmentView () <
     UIContextMenuInteractionDelegate>
 @end
 

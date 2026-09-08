@@ -99,6 +99,10 @@ MODE=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --sideload-payload)
+      [[ -n "$MODE" ]] && die "Multiple flags provided. Choose one."
+      MODE="sideload-payload"; shift
+      ;;
     --sideloaded|--sideloaded=*)
       [[ -n "$MODE" ]] && die "Multiple flags provided. Choose one."
       MODE="sideloaded"; shift
@@ -187,6 +191,20 @@ if [[ ! -f "$SCRIPT_DIR/deps/ffmpeg-kit-next/build/FFmpegKit.h" ||
 fi
 
 case "$MODE" in
+  sideload-payload)
+    say "Compiling the sideload payload for local IPA packaging."
+    run_timed "Clean build tree" clean_tree
+    run_make "Sideload payload compile" SIDELOADED=1 || die "An error occurred when building."
+    PAYLOAD_DIR="$SCRIPT_DIR/packages/SideloadPayload"
+    mkdir -p "$PAYLOAD_DIR/Frameworks"
+    for artifact in BHTwitter.dylib libbhFLEX.dylib zxPluginsInject.dylib; do
+      artifact_path="$(find_build_artifact "$artifact")"
+      validate_runtime_linkage "$artifact_path"
+      cp "$artifact_path" "$PAYLOAD_DIR/Frameworks/$artifact"
+    done
+    cp -R "layout/Library/Application Support/BHT/BHTwitter.bundle" "$PAYLOAD_DIR/"
+    (cd packages && zip -qry NeoFreeBird-sideload-payload.zip SideloadPayload)
+    ;;
   sideloaded)
     say "Preparing to compile NeoFreeBird. Argument added: --sideloaded."
     run_timed "Clean build tree" clean_tree

@@ -136,10 +136,10 @@ static void BHTPulseSidebarSearchTarget(UIView* target) {
 
 - (void)setupSaveButton {
     UIBarButtonItem* save = [[UIBarButtonItem alloc]
-        initWithBarButtonSystemItem:UIBarButtonSystemItemSave
+        initWithBarButtonSystemItem:UIBarButtonSystemItemDone
                              target:self
                              action:@selector(saveTapped)];
-    save.enabled = NO;
+    save.enabled = YES;
     self.navigationItem.rightBarButtonItem = save;
 }
 
@@ -271,16 +271,14 @@ static void BHTPulseSidebarSearchTarget(UIView* target) {
 }
 
 - (void)recomputeChanges {
-    self.navigationItem.rightBarButtonItem.enabled =
-        ![self.selectedItems isEqualToArray:self.originalSelection];
+    if ([self.selectedItems isEqualToArray:self.originalSelection]) return;
+    [BHTSidebarNavigationUtility setVisibleItemIDs:self.selectedItems];
+    self.originalSelection = [self.selectedItems copy];
 }
 
 #pragma mark - Save and restore
 
 - (void)saveTapped {
-    [BHTSidebarNavigationUtility
-        setVisibleItemIDs:self.selectedItems];
-    self.originalSelection = [self.selectedItems copy];
     [self recomputeChanges];
     [self.navigationController popViewControllerAnimated:YES];
 }

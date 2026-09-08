@@ -561,7 +561,7 @@
 "LIKES_NAV_LIKES_TITLE" = "Likes";
 "SIDEBAR_NAVIGATION_EDITOR_TITLE" = "Edit sidebar";
 "SIDEBAR_NAVIGATION_SETTINGS_TITLE" = "Sidebar";
-"SIDEBAR_NAVIGATION_GRID_DETAIL" = "Tap an item to show or hide it. Drag the tiles or the bar below to reorder X's sidebar.";
+"SIDEBAR_NAVIGATION_GRID_DETAIL" = "Tap an item to show or hide it. Drag the tiles or the bar below to reorder X's sidebar. Changes are saved automatically.";
 "SIDEBAR_NAVIGATION_RESET_MESSAGE" = "Restore the sidebar to its default layout?";
 "SIDEBAR_PROFILE_TITLE" = "Profile";
 "SIDEBAR_BLUE_TITLE" = "Blue";

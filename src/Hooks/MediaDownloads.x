@@ -514,7 +514,7 @@ static NSArray* DMVideoEntities(UIView* attachmentView) {
     return [entities copy];
 }
 
-%hook _TtC14DMConversation21MessageAttachmentView
+%hook _TtC16ChatConversation21MessageAttachmentView
 %property (nonatomic, strong) UIContextMenuInteraction* downloadMenuInteraction;
 %property (nonatomic, strong) DownloadInlineButton* downloadHandler;
 - (void)layoutSubviews {

@@ -14,7 +14,7 @@
 #import <stdint.h>
 #import <string.h>
 
-static NSString* const BHTCompatibilityTargetVersion = @"12.9";
+static NSString* const BHTCompatibilityTargetVersion = @"12.24.1";
 static NSString* const BHTMetricsHandlerName = @"bht";
 static const NSTimeInterval BHTCompatibilityMinimumPreflightDuration = 12.0;
 

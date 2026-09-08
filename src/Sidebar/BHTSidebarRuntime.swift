@@ -1,5 +1,6 @@
 import Foundation
 import Darwin
+import Combine
 
 @_silgen_name("BHTInvokeTwitterDashArraySetter")
 private func BHTInvokeTwitterDashArraySetter(
@@ -17,6 +18,8 @@ private final class BHTSidebarDataSourceCache {
     weak var dataSource: AnyObject?
     var properties: [String: BHTSidebarPropertyCache] = [:]
     var isApplyingConfiguration = false
+    var observation: AnyCancellable?
+    var reapplyScheduled = false
 
     init(dataSource: AnyObject) {
         self.dataSource = dataSource
@@ -47,6 +50,9 @@ public final class BHTSidebarRuntime: NSObject {
         [ObjectIdentifier: BHTSidebarDataSourceCache] = [:]
     private static let controllerApplyHandled = 1 << 0
     private static let controllerApplyChanged = 1 << 1
+    #if BHT_SIDEBAR_TESTS
+    static var testSetter: ((String, Any, AnyObject) -> Bool)?
+    #endif
 
     @objc(applyToDataSource:)
     public static func apply(to dataSource: AnyObject) {
@@ -88,13 +94,21 @@ public final class BHTSidebarRuntime: NSObject {
     private static func applyConfiguration(
         to dataSource: AnyObject
     ) -> Bool {
+        guard Thread.isMainThread else {
+            DispatchQueue.main.async { [weak dataSource] in
+                if let dataSource { _ = applyConfiguration(to: dataSource) }
+            }
+            return false
+        }
         guard beginConfiguration(on: dataSource) else {
             return false
         }
         defer { endConfiguration(on: dataSource) }
+        observeChanges(to: dataSource)
 
-        let visible = UserDefaults.standard.stringArray(forKey: visibleItemsKey)
-            ?? canonicalIDs
+        var seen = Set<String>()
+        let visible = (UserDefaults.standard.stringArray(forKey: visibleItemsKey)
+            ?? canonicalIDs).filter { canonicalIDs.contains($0) && seen.insert($0).inserted }
         let rank = Dictionary(
             uniqueKeysWithValues: visible.enumerated().map { ($1, $0) }
         )
@@ -121,6 +135,49 @@ public final class BHTSidebarRuntime: NSObject {
             mirror = current.superclassMirror
         }
         return changed
+    }
+
+    private static func observeChanges(to dataSource: AnyObject) {
+        // X republishes the drawer after account/badge/network updates, well
+        // after its controller factory returns. Subscribe to those changes so
+        // every replacement snapshot receives the saved selection.
+        cacheLock.lock()
+        let cache = cacheLocked(for: dataSource)
+        let needsObservation = cache.observation == nil
+        cacheLock.unlock()
+        guard needsObservation,
+              let observable = dataSource as? any ObservableObject else { return }
+        func subscribe<T: ObservableObject>(_ object: T) -> AnyCancellable {
+            object.objectWillChange.sink { [weak dataSource] _ in
+                guard let dataSource else { return }
+                scheduleReapply(to: dataSource)
+            }
+        }
+        let observation = _openExistential(observable, do: subscribe)
+        cacheLock.lock()
+        cache.observation = observation
+        cacheLock.unlock()
+    }
+
+    private static func scheduleReapply(to dataSource: AnyObject) {
+        cacheLock.lock()
+        let cache = cacheLocked(for: dataSource)
+        // Our own setters publish too. The idempotence check and this guard
+        // prevent an observer loop; native will-change events are deferred
+        // until the publisher has committed its replacement value.
+        if cache.isApplyingConfiguration || cache.reapplyScheduled {
+            cacheLock.unlock()
+            return
+        }
+        cache.reapplyScheduled = true
+        cacheLock.unlock()
+        DispatchQueue.main.async { [weak dataSource] in
+            guard let dataSource else { return }
+            cacheLock.lock()
+            cacheLocked(for: dataSource).reapplyScheduled = false
+            cacheLock.unlock()
+            _ = applyConfiguration(to: dataSource)
+        }
     }
 
     private static func sidebarPropertyName(
@@ -339,8 +396,7 @@ public final class BHTSidebarRuntime: NSObject {
            let firstIndex = current.first?.0 {
             propertyCache.insertionIndex = firstIndex
         }
-        for (_, identifier, value) in current
-            where propertyCache.managedItems[identifier] == nil {
+        for (_, identifier, value) in current {
             propertyCache.managedItems[identifier] = value
         }
 
@@ -423,6 +479,9 @@ public final class BHTSidebarRuntime: NSObject {
         replacement: T,
         on object: AnyObject
     ) -> Bool {
+        #if BHT_SIDEBAR_TESTS
+        if let testSetter { return testSetter(property, replacement, object) }
+        #endif
         guard MemoryLayout<T>.size == MemoryLayout<UInt>.size,
               let symbolName = setterSymbols[property],
               let setterSymbol = symbol(named: symbolName),
@@ -461,7 +520,24 @@ public final class BHTSidebarRuntime: NSObject {
     }
 
     private static func identifier(for value: Any) -> String? {
-        guard let title = Mirror(reflecting: value).children
+        let fields = Mirror(reflecting: value).children
+        // Icon asset names are stable across UI languages. X's current primary
+        // row IDs are UUIDs, so those cannot identify a saved preference.
+        if let icon = fields.first(where: { $0.label == "iconName" }) {
+            let name = (unwrapOptional(icon.value) as? String ?? "").lowercased()
+            switch name {
+            case "account", "account_stroke", "person", "person_stroke": return "profile"
+            case "lists", "lists_stroke", "list", "list_stroke": return "lists"
+            case "news", "news_stroke": return "news"
+            case "bookmark", "bookmark_stroke", "history", "history_stroke": return "history"
+            case "communities", "communities_stroke": return "communities"
+            case "messages", "messages_stroke", "message_stroke", "envelope_stroke": return "chat"
+            case "notifications", "notifications_stroke", "bell_stroke": return "notifications"
+            case "spaces", "spaces_stroke": return "spaces"
+            default: break
+            }
+        }
+        guard let title = fields
             .first(where: { $0.label == "title" })?
             .value as? String
         else {

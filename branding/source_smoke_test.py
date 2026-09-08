@@ -425,7 +425,7 @@ def main() -> None:
     require_source_tokens(
         compatibility_login_source,
         (
-            'BHTCompatibilityTargetVersion = @"12.9"',
+            'BHTCompatibilityTargetVersion = @"12.24.1"',
             "static void BHTLoadCompatibilityFrameworkIfNeeded(void)",
             '@"TwitterSPMMigration.framework"',
             '@"TwitterSPMMigration"',
@@ -1588,7 +1588,7 @@ def main() -> None:
         (
             "BHTReplyDiagnosticMethodHasShape(",
             "BHTReplyDiagnosticMethodHasObjectArguments(",
-            'isEqualToString:@"12.9"',
+            'isEqualToString:@"12.24.1"',
             "method_getNumberOfArguments(method)",
             "if (*type != '@') return NO;",
             "BHTInstallReplyWorkflowDiagnosticObservers();",
@@ -1804,7 +1804,7 @@ def main() -> None:
     require_source_tokens(
         reply_network_hook,
         (
-            'isEqualToString:@"12.9"',
+            'isEqualToString:@"12.24.1"',
             "%hook NSURLSession",
             "dataTaskWithRequest:(NSURLRequest*)request",
             "uploadTaskWithRequest:(NSURLRequest*)request",
@@ -1915,7 +1915,7 @@ def main() -> None:
             "BHTPrepareNativeReplyFailureDiagnostics(void)",
             "BHTObserveNativeReplyFailureNotification(",
             "BHTNativeReplyFailureDiagnosticSnapshot(void)",
-            'isEqualToString:@"12.9"',
+            'isEqualToString:@"12.24.1"',
             '"TFNTwitterCompositionOutboxNotificationErrorUserInfoKey"',
             '"HTTPRequestActionResponseErrorGetAPIErrors"',
             '"HTTPRequestActionResponseErrorGetRestErrors"',
@@ -2506,7 +2506,7 @@ def main() -> None:
     require_source_tokens(
         reply_application_hook,
         (
-            'isEqualToString:@"12.9"',
+            'isEqualToString:@"12.24.1"',
             '%hook _TtC14GraphQLActions23GraphQLEndpointResponse',
             'modelWithParseError:(id __autoreleasing*)parseError',
             'APIErrors:(id __autoreleasing*)APIErrors',
@@ -3340,7 +3340,7 @@ def main() -> None:
             'NSClassFromString(@"T1WebViewController")',
             'NSClassFromString(@"T1BaseWebViewController")',
             'NSClassFromString(@"T1WebNavigationController")',
-            'isEqualToString:@"12.9"',
+            'isEqualToString:@"12.24.1"',
             "replyURL, account, YES, NO,",
             "nil, nil, nil",
             "controllerAccount != account",
@@ -4104,11 +4104,11 @@ def main() -> None:
             "navigation delegate"
         )
 
-    if "Version: 6.1.0-beta.50" not in (
+    if "Version: 6.1.0-beta.51" not in (
         ROOT / "control"
     ).read_text(encoding="utf-8"):
         raise AssertionError(
-            "The paired native-write diagnostics must ship as beta.50"
+            "The paired native-write diagnostics must ship as beta.51"
         )
 
     branding_source = (
@@ -5531,9 +5531,13 @@ def main() -> None:
         "return MAX(0.10, MIN(10.0, ratio));",
         "waterfallDecodedRatioCorrections",
         "waterfallAnchorPreservations",
-        "collectionView.indexPathsForVisibleItems",
-        "waterfallLayoutInvalidationPendingUntilIdle",
-        "applyPendingWaterfallLayoutInvalidationIfIdle",
+        "collection.indexPathsForVisibleItems",
+        "waterfallLayoutDisplayLink",
+        "applyPendingWaterfallLayoutInvalidation",
+        "NSRunLoopCommonModes",
+        "context.contentOffsetAdjustment",
+        "BHTMediaEntityAspectRatio",
+        "BHTWaterfallPreviewPixels",
         "aspectRatioConfirmedByImage",
         "updateAdaptiveAspectRatioForItem",
         "desiredSpan = MIN(2, columns);",

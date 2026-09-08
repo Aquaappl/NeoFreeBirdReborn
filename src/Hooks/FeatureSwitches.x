@@ -566,22 +566,7 @@ static NSNumber* FeatureSwitchOverrideValueForKey(NSString* key) {
 
 %end
 
-%hook T1SlideshowViewController
-
-- (BOOL)_t1_shouldDisplayLoadHighQualityImageItemForImageDisplayView:(id)imageView
-                                                      highestQuality:(BOOL)highestQuality {
-    return [BHTSettings boolForKey:@"auto_highest_load"] ? YES : %orig;
-}
-
-- (id)_t1_loadHighQualityActionItemWithTitle:(id)title
-                         forImageDisplayView:(id)imageView
-                              highestQuality:(BOOL)highestQuality {
-    return %orig(title, imageView,
-                 [BHTSettings boolForKey:@"auto_highest_load"] ? YES
-                                                                : highestQuality);
-}
-
-%end
+// T1SlideshowViewController was removed in X 12.24.1.
 
 // MARK: - Highest available video quality
 
