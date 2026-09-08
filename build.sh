@@ -53,6 +53,7 @@ TL;DR: You need to select one flag to build NeoFreeBird.
 
 Flags (required):
   --sideloaded   Compile NeoFreeBird as a .ipa so you can sideload it with AltStore, Sideloadly or similar.
+  --sideload-payload  Compile a payload ZIP for packaging with a local IPA.
   --rootless     Compile NeoFreeBird as a rootless-jailbreak .deb file.
   --trollstore   Compile NeoFreeBird as a .tipa so you can install it using TrollStore.
   --rootfull     Compile NeoFreeBird as a rootful-jailbreak .deb file.
