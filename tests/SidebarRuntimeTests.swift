@@ -29,9 +29,13 @@ struct SidebarRuntimeTests {
         let key = "bht_sidebar_navigation_visible"
         let defaults = UserDefaults.standard
         let previous = defaults.object(forKey: key)
+        let previousGrok = defaults.object(forKey: "hide_grok_sidebar")
+        defaults.set(false, forKey: "hide_grok_sidebar")
         defer {
             if let previous { defaults.set(previous, forKey: key) }
             else { defaults.removeObject(forKey: key) }
+            if let previousGrok { defaults.set(previousGrok, forKey: "hide_grok_sidebar") }
+            else { defaults.removeObject(forKey: "hide_grok_sidebar") }
         }
         let controller = Controller()
         let source = controller.dataSource
@@ -80,6 +84,24 @@ struct SidebarRuntimeTests {
         let settledWrites = writes
         drain()
         precondition(writes == settledWrites, "The observer must not feed back into itself")
+        let grok = Row(title: "Try Grok Bot", iconName: "grok_bot_logo", revision: 6)
+        source.primaryItems = [grok]
+        defaults.set(["grok_bot"], forKey: key)
+        _ = BHTSidebarRuntime.applyResult(forDashContentController: controller)
+        precondition(source.primaryItems.map(\.title) == ["Try Grok Bot"])
+        defaults.set(true, forKey: "hide_grok_sidebar")
+        _ = BHTSidebarRuntime.applyResult(forDashContentController: controller)
+        precondition(source.primaryItems.isEmpty, "The existing Grok switch must hide the new bot")
+        source.primaryItems = [grok]
+        drain()
+        precondition(source.primaryItems.isEmpty, "Native refresh must not resurrect Grok Bot")
+        defaults.set(false, forKey: "hide_grok_sidebar")
+        defaults.set([String](), forKey: key)
+        _ = BHTSidebarRuntime.applyResult(forDashContentController: controller)
+        precondition(source.primaryItems.isEmpty, "The sidebar editor can hide the bot independently")
+        defaults.set(["grok_bot"], forKey: key)
+        _ = BHTSidebarRuntime.applyResult(forDashContentController: controller)
+        precondition(source.primaryItems.map(\.title) == ["Try Grok Bot"])
         print("PASS: sidebar refresh, localization, duplicate preferences, hide-all, restore, and observer idempotence")
     }
 }

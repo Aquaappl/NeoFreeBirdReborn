@@ -9,6 +9,8 @@ on:
       - "deps/**"
       - "layout/**"
       - "branding/**"
+      - "tests/**"
+      - "tools/**"
       - "Makefile"
       - "build.sh"
       - "rebrand.sh"
@@ -113,11 +115,18 @@ jobs:
           python3 -m py_compile main/branding/ipa_branding.py main/branding/build_twitter_bird_glyph.py main/branding/source_smoke_test.py
           python3 main/branding/source_smoke_test.py
           python3 main/branding/smoke_test.py
+          python3 main/tests/test_hook_audit.py
 
       - name: Test sidebar persistence
         run: |
           swiftc -D BHT_SIDEBAR_TESTS main/src/Sidebar/BHTSidebarRuntime.swift main/tests/SidebarRuntimeTests.swift -o "$RUNNER_TEMP/sidebar-tests"
           "$RUNNER_TEMP/sidebar-tests"
+
+      - name: Test Likes navigation and For You filters
+        run: |
+          swiftc main/src/Timeline/BHTHomeTimelineRuntime.swift main/tests/HomeTimelineRuntimeTests.swift -o "$RUNNER_TEMP/home-tests"
+          "$RUNNER_TEMP/home-tests"
+          python3 main/tests/run_native_regressions.py
 
       - name: Restore Theos Toolchain
         id: theos-cache

@@ -37,6 +37,7 @@ NSString* const BHTSidebarChatItemID = @"chat";
 NSString* const BHTSidebarNotificationsItemID = @"notifications";
 NSString* const BHTSidebarSpacesItemID = @"spaces";
 NSString* const BHTSidebarFollowRequestsItemID = @"follow_requests";
+NSString* const BHTSidebarGrokBotItemID = @"grok_bot";
 NSString* const BHTSidebarNavigationSettingsDidChangeNotification =
     @"BHTSidebarNavigationSettingsDidChangeNotification";
 
@@ -97,7 +98,8 @@ void BHTRecordSidebarAddAccountRefreshRequested(void) {
         BHTSidebarChatItemID,
         BHTSidebarNotificationsItemID,
         BHTSidebarSpacesItemID,
-        BHTSidebarFollowRequestsItemID
+        BHTSidebarFollowRequestsItemID,
+        BHTSidebarGrokBotItemID
     ];
 }
 
@@ -163,6 +165,12 @@ void BHTRecordSidebarAddAccountRefreshRequested(void) {
             TabTitleKey:
                 [bundle localizedStringForKey:@"SIDEBAR_FOLLOW_REQUESTS_TITLE"],
             TabImageKey: @"sf:person.badge.clock"
+        },
+        @{
+            TabPageKey: BHTSidebarGrokBotItemID,
+            TabTitleKey:
+                [bundle localizedStringForKey:@"SIDEBAR_GROK_BOT_TITLE"],
+            TabImageKey: @"sf:sparkles"
         }
     ];
 }

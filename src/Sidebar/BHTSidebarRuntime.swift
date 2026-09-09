@@ -44,6 +44,7 @@ public final class BHTSidebarRuntime: NSObject {
         "notifications",
         "spaces",
         "follow_requests",
+        "grok_bot",
     ]
     private static let cacheLock = NSLock()
     private static var originalItemsCache:
@@ -112,7 +113,10 @@ public final class BHTSidebarRuntime: NSObject {
         let rank = Dictionary(
             uniqueKeysWithValues: visible.enumerated().map { ($1, $0) }
         )
-        let selected = Set(visible)
+        var selected = Set(visible)
+        if UserDefaults.standard.bool(forKey: "hide_grok_sidebar") {
+            selected.remove("grok_bot")
+        }
         var changed = false
 
         var mirror: Mirror? = Mirror(reflecting: dataSource)
@@ -534,6 +538,7 @@ public final class BHTSidebarRuntime: NSObject {
             case "messages", "messages_stroke", "message_stroke", "envelope_stroke": return "chat"
             case "notifications", "notifications_stroke", "bell_stroke": return "notifications"
             case "spaces", "spaces_stroke": return "spaces"
+            case "grok_bot", "grok_bot_stroke", "grok_bot_logo", "grokbot": return "grok_bot"
             default: break
             }
         }
@@ -569,6 +574,8 @@ public final class BHTSidebarRuntime: NSObject {
             return "spaces"
         case "follow requests", "follower requests":
             return "follow_requests"
+        case "try grok bot", "grok bot", "try @grok":
+            return "grok_bot"
         default:
             return nil
         }

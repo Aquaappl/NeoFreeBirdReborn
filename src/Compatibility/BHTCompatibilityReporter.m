@@ -1062,7 +1062,7 @@ static NSDictionary* BHTForYouControllerRuntimeShape(void) {
                       NSSelectorFromString(@"itemAtIndexPath:")]),
         },
         @"filterExecutionPolicy":
-            @"verified_urt_role_section_then_exact_urt_item_height_fallback",
+            @"explicit_home_provider_then_legacy_urt_role_with_item_height_fallback",
         @"unknownSectionOwnerFailsOpen": @YES,
     };
 }
@@ -1087,6 +1087,8 @@ static NSDictionary* BHTForYouFilterDiagnosticSnapshot(void) {
         @"noMatches",
         @"renderRowCollapses",
         @"renderReloads",
+        @"providerOwnerResolvedChecks",
+        @"providerOwnerMissingChecks",
     ];
     NSMutableDictionary* snapshot =
         [NSMutableDictionary dictionaryWithCapacity:names.count];
@@ -1528,8 +1530,7 @@ static NSArray* BHTRuntimeProbes(void) {
         BHTProbe(@"video", @"TFSTwitterEntityMediaVideoInfo", @"variants", NO),
         BHTProbe(@"video", @"TFSTwitterEntityMediaVideoInfo", @"primaryUrl", NO),
         BHTProbe(@"video", @"TFSTwitterEntityMedia", @"allowDownload", NO),
-        BHTProbe(@"video", @"T1VideoDownloadViewModel", @"urlIfCanDownloadWithAccount:mediaEntity:", YES),
-        BHTProbe(@"video", @"T1VideoDownloadViewModel", @"makeVideDownloaderWithAccount:fromViewController:mediaEntity:statusViewModel:scribeContext:", YES),
+        BHTProbe(@"video", @"T1VideoDownloadViewModel", @"makeVideDownloaderWithAccount:fromViewController:mediaEntity:statusViewModel:", YES),
         BHTProbe(@"video", @"T1VideoDownloadViewModel", @"tappedDownload", NO),
         BHTProbe(@"video", @"T1TwitterSwift.VideoControlsView", @"init", NO),
         BHTProbe(@"video", @"TweetMediaAttachments.MultiMediaView", @"inlineMediaInfos", NO),

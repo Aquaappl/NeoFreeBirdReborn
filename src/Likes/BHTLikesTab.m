@@ -121,6 +121,14 @@ static void BHTIncrementLikesDiagnostic(NSString* key) {
     }
 }
 
+void BHTRecordLikesNavigationConfiguration(NSInteger nativeCount,
+                                            NSArray<NSString*>* appliedPages,
+                                            NSString* state) {
+    BHTSetLikesDiagnostic(@"activityHistoryNativeTabCount", @(nativeCount));
+    BHTSetLikesDiagnostic(@"activityHistoryConfigurationState", state);
+    if (appliedPages) BHTSetLikesDiagnostic(@"appliedActivityHistoryTabs", appliedPages);
+}
+
 NSDictionary* BHTLikesDiagnosticsSnapshot(void) {
     @synchronized(BHTLikesDiagnosticsLock()) {
         NSMutableDictionary* snapshot =

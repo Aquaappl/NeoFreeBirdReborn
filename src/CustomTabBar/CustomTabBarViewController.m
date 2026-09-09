@@ -406,16 +406,16 @@ static UIViewController* findViewControllerOfClass(UIViewController* vc,
     UIAlertController* alert = [UIAlertController
         alertControllerWithTitle:
             [[BHTBundle sharedBundle]
-                localizedTwitterStringForKey:
-                    @"SUBSCRIPTION_TAB_CUSTOMIZATION_RESTORE_BUTTON_TITLE"]
+                localizedStringForKey:
+                    @"BHT_RESTORE_DEFAULTS"]
                          message:[[BHTBundle sharedBundle]
                                      localizedStringForKey:
                                          @"CUSTOM_TAB_BAR_RESET_MESSAGE"]
                   preferredStyle:UIAlertControllerStyleAlert];
     [alert addAction:[UIAlertAction
                          actionWithTitle:[[BHTBundle sharedBundle]
-                                             localizedTwitterStringForKey:
-                                                 @"CONTINUE_ACTION_LABEL"]
+                                             localizedStringForKey:
+                                                 @"BHT_RESTORE_DEFAULTS"]
                                    style:UIAlertActionStyleDestructive
                                  handler:^(UIAlertAction* _Nonnull action) {
                                      [CustomTabBarUtility resetSelection];
@@ -553,8 +553,8 @@ static UIViewController* findViewControllerOfClass(UIViewController* vc,
     [footer.subviews makeObjectsPerformSelector:@selector(removeFromSuperview)];
 
     NSString* title = [[BHTBundle sharedBundle]
-        localizedTwitterStringForKey:
-            @"SUBSCRIPTION_TAB_CUSTOMIZATION_RESTORE_BUTTON_TITLE"];
+        localizedStringForKey:
+            @"BHT_RESTORE_DEFAULTS"];
     UIButton* restore = [objc_getClass("TFNButton") buttonWithTitle:title
                                                          imageNamed:nil
                                                               style:2

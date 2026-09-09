@@ -260,13 +260,11 @@
 // associates the originating entity with it and substitutes its own quality
 // picker when video downloads are enabled.
 @interface T1VideoDownloadViewModel : NSObject
-+ (NSURL*)urlIfCanDownloadWithAccount:(id)account
-                          mediaEntity:(TFSTwitterEntityMedia*)mediaEntity;
+
 + (id)makeVideDownloaderWithAccount:(id)account
                  fromViewController:(UIViewController*)viewController
                         mediaEntity:(TFSTwitterEntityMedia*)mediaEntity
-                    statusViewModel:(id)statusViewModel
-                      scribeContext:(id)scribeContext;
+                    statusViewModel:(id)statusViewModel;
 - (void)tappedDownload;
 @end
 

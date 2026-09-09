@@ -97,6 +97,8 @@ static char kCopyProviderKey;
 
 @end
 
+%group BHTLegacyProfileActionProviders
+
 %hook T1ProfileHeaderViewController
 
 - (NSArray*)actionButtonProviders {
@@ -115,6 +117,8 @@ static char kCopyProviderKey;
     }
     return [providers arrayByAddingObject:copyProvider];
 }
+
+%end
 
 %end
 
@@ -181,3 +185,13 @@ static char kCopyProviderKey;
 }
 
 %end
+
+// Older profile layouts expose this provider list. Do not create a replacement
+// method with no native implementation on the current catalog-based header.
+%ctor {
+    %init;
+    Class header = NSClassFromString(@"T1ProfileHeaderViewController");
+    if (class_getInstanceMethod(header, @selector(actionButtonProviders))) {
+        %init(BHTLegacyProfileActionProviders);
+    }
+}

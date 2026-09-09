@@ -4104,11 +4104,11 @@ def main() -> None:
             "navigation delegate"
         )
 
-    if "Version: 6.1.0-beta.51" not in (
+    if "Version: 6.1.0-beta.52" not in (
         ROOT / "control"
     ).read_text(encoding="utf-8"):
         raise AssertionError(
-            "The paired native-write diagnostics must ship as beta.51"
+            "The paired native-write diagnostics must ship as beta.52"
         )
 
     branding_source = (

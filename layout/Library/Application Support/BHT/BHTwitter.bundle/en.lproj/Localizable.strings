@@ -258,7 +258,13 @@
 "HIDE_PROMOTED_TITLE" = "No ads";
 "HIDE_PROMOTED_DETAIL" = "Remove all ads.";
 
-"UNDO_TWEET_TITLE" = "Undo Tweet";
+"UNDO_TWEET_TITLE" = "Undo send";
+"UNDO_SEND_OFF" = "Off — send immediately";
+"UNDO_SEND_SECONDS_FORMAT" = "%ld seconds";
+"UNDO_SEND_DESCRIPTION" = "Choose how long to hold a post before sending, giving you time to undo it.";
+"BHT_DOWNLOAD_PROGRESS" = "Downloading…";
+"BHT_RESTORE_DEFAULTS" = "Restore defaults";
+"SIDEBAR_GROK_BOT_TITLE" = "Try Grok Bot";
 
 "DOWNLOAD_VIDEOS_TITLE" = "Download media";
 "DOWNLOAD_VIDEOS_DETAIL" = "Save videos or GIFs right from the Tweet overflow menu.";
@@ -553,7 +559,7 @@
 "LIKES_MEDIA_WATERFALL_DETAIL" = "Add a Posts/Media selector with a pinch-adjustable 2–5 column gallery.";
 "LIKES_NAVIGATION_EDITOR_TITLE" = "Edit Likes navigation bar";
 "LIKES_NAVIGATION_SETTINGS_TITLE" = "Likes navigation";
-"LIKES_NAVIGATION_GRID_DETAIL" = "Tap a destination to show or hide it. Drag the tiles or the bar below to reorder the Likes section.";
+"LIKES_NAVIGATION_GRID_DETAIL" = "Tap a destination to show or hide it. Drag to reorder. Changes are saved automatically.";
 "LIKES_NAVIGATION_RESET_MESSAGE" = "Restore the Likes section and waterfall viewer to their default layout?";
 "LIKES_NAV_BOOKMARKS_TITLE" = "Bookmarks";
 "LIKES_NAV_VIDEOS_TITLE" = "Videos";

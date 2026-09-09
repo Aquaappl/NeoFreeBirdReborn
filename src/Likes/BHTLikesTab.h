@@ -22,6 +22,9 @@ BOOL BHTIsManagedLikesActivityHistoryController(
     UIViewController* controller);
 void BHTRefreshLikesActivityHistoryConfiguration(
     UIViewController* rootController);
+void BHTRecordLikesNavigationConfiguration(NSInteger nativeCount,
+                                            NSArray<NSString*>* appliedPages,
+                                            NSString* state);
 
 // Called by the timeline section hook while a private Likes timeline is active.
 // Returns YES when the data controller belongs to the private Likes timeline,

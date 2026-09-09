@@ -6,11 +6,10 @@ import struct
 import sys
 from pathlib import Path
 
-import macho_metadata as objc
-
 # TARGET and SOURCE are set by the command-line entry point.
 
 def inventory():
+    import macho_metadata as objc
     result = {'images': [], 'classes': {}, 'symbols': {}}
     for path in sorted((TARGET / 'Payload').rglob('*')):
         if not path.is_file():
@@ -71,7 +70,10 @@ def inventory():
                     if selector:
                         methods[kind + selector] = {'types': types, 'address': imp}
             ro = objc.class_ro(binary, addr)
-            result['classes'][name] = {'image': image, 'superclass': superclass, 'size': objc.u32(binary, ro + 8), 'methods': methods}
+            # A category in an earlier image may extend a class defined in a
+            # later image. Preserve those methods when loading its class body.
+            previous_methods = result['classes'].get(name, {}).get('methods', {})
+            result['classes'][name] = {'image': image, 'superclass': superclass, 'size': objc.u32(binary, ro + 8), 'methods': {**previous_methods, **methods}}
         for section in binary.sections:
             if section.name not in ('__objc_catlist', '__objc_nlcatlist'):
                 continue
@@ -94,6 +96,15 @@ def inventory():
 def hooks(inv):
     output = []
     system = ('UI', 'NS', 'AV', 'WK', 'CA', 'SF', 'PH')
+    inherited_system = {
+        'UIView': {'-didMoveToWindow', '-layoutSubviews', '-didAddSubview:',
+                   '-traitCollectionDidChange:', '-setHidden:', '-setAlpha:', '-sizeThatFits:'},
+        'UIViewController': {'-viewDidLoad', '-viewWillAppear:', '-viewDidAppear:',
+                             '-viewWillDisappear:', '-viewDidDisappear:',
+                             '-viewDidLayoutSubviews', '-traitCollectionDidChange:'},
+        'CALayer': {'-setHidden:', '-setOpacity:'},
+        'NSObject': {'-init', '-dealloc', '-description', '-hash', '-isEqual:'},
+    }
     def lookup(name, key, seen=None):
         seen = (seen or set()) | {name}
         entry = inv['classes'].get(name, {})
@@ -117,7 +128,11 @@ def hooks(inv):
                 is_new = '%new' in body[last:method.start()]
                 last = method.end()
                 owner, native = lookup(name, sign + sel)
-                status = 'new' if is_new else 'present' if native else 'system-runtime' if owner.startswith(system) else 'missing-method' if name in inv['classes'] else 'missing-class'
+                # Reaching NSObject/UIViewController does not make an unknown
+                # app-specific selector a system method. This previously hid
+                # the removed Activity History segmented-controller hooks.
+                system_method = ((name not in inv['classes'] or inv['classes'][name].get('category_only')) and name.startswith(system)) or sign + sel in inherited_system.get(owner, set())
+                status = 'new' if is_new else 'present' if native else 'system-runtime' if system_method else 'missing-method' if name in inv['classes'] else 'missing-class'
                 output.append({'file': path.relative_to(SOURCE).as_posix(), 'class': name, 'selector': sign + sel, 'return': ret, 'args': args.strip(), 'status': status, 'owner': owner, 'native': native})
     return output
 
@@ -150,6 +165,21 @@ def main():
         for entry in entries:
             if entry["class"] == "HomeTimelineContainerViewController" and entry["status"] == "missing-class":
                 entry["status"] = "guarded-legacy-alias"
+            # These explicitly optional implementations have constructor
+            # guards in the named source files. Keep absence visible instead
+            # of reporting them as present/inherited methods.
+            optional_guards = {
+                ("src/Hooks/Profile.x", "T1ProfileHeaderViewController", "-actionButtonProviders"):
+                    "BHTLegacyProfileActionProviders",
+                ("src/Hooks/ReplyNetworkDiagnostics.x", "TNLURLSessionTaskOperation",
+                 "-_network_finalizeDidCompleteTask:URLSession:error:"):
+                    "BHTNativeReplyTNLCompletionHooks",
+            }
+            guard = optional_guards.get((entry["file"], entry["class"], entry["selector"]))
+            if guard and entry["status"] == "missing-method":
+                source = (SOURCE / entry["file"]).read_text(encoding="utf8")
+                if f"%group {guard}" in source and f"%init({guard})" in source:
+                    entry.update(status="guarded-runtime-alternative", runtime_guard=guard)
         # Pure Swift names may have zero nlist values and live in the export
         # trie. Include the resolved addresses of each live sidebar setter.
         swift = {name: values for name, values in data["symbols"].items()
