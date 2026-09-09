@@ -12,11 +12,13 @@
 %hook T1ProfileDisplayNormalMainContentProvider
 
 - (UIViewController*)_generatePhotoViewController {
-    return BHTProfileMediaController(%orig, @"photos");
+    UIViewController* nativeController = %orig;
+    return BHTProfileMediaController(nativeController, @"photos");
 }
 
 - (UIViewController*)_generateVideoViewController {
-    return BHTProfileMediaController(%orig, @"videos");
+    UIViewController* nativeController = %orig;
+    return BHTProfileMediaController(nativeController, @"videos");
 }
 
 %end
