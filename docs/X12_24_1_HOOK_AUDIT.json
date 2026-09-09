@@ -497,9 +497,10 @@
     }
   ],
   "counts": {
-    "present": 201,
-    "system-runtime": 58,
+    "present": 220,
+    "system-runtime": 30,
     "new": 9,
+    "guarded-runtime-alternative": 2,
     "guarded-legacy-alias": 5
   },
   "hooks": [
@@ -1519,9 +1520,12 @@
       "selector": "-isSensitiveTweetWarningsComposeEnabled",
       "return": "BOOL",
       "args": "isSensitiveTweetWarningsComposeEnabled",
-      "status": "system-runtime",
-      "owner": "NSObject",
-      "native": null
+      "status": "present",
+      "owner": "TFNTwitterAccount",
+      "native": {
+        "types": "B16@0:8",
+        "address": 1078076
+      }
     },
     {
       "file": "src/Hooks/FeatureSwitches.x",
@@ -1529,9 +1533,12 @@
       "selector": "-isSensitiveTweetWarningsConsumeEnabled",
       "return": "BOOL",
       "args": "isSensitiveTweetWarningsConsumeEnabled",
-      "status": "system-runtime",
-      "owner": "NSObject",
-      "native": null
+      "status": "present",
+      "owner": "TFNTwitterAccount",
+      "native": {
+        "types": "B16@0:8",
+        "address": 1078008
+      }
     },
     {
       "file": "src/Hooks/FeatureSwitches.x",
@@ -1539,9 +1546,12 @@
       "selector": "-isAgeAssuranceAgeVerificationFlowEnabled",
       "return": "BOOL",
       "args": "isAgeAssuranceAgeVerificationFlowEnabled",
-      "status": "system-runtime",
-      "owner": "NSObject",
-      "native": null
+      "status": "present",
+      "owner": "TFNTwitterAccount",
+      "native": {
+        "types": "B16@0:8",
+        "address": 7337788
+      }
     },
     {
       "file": "src/Hooks/FeatureSwitches.x",
@@ -1549,9 +1559,12 @@
       "selector": "-isVideoDynamicAdEnabled",
       "return": "BOOL",
       "args": "isVideoDynamicAdEnabled",
-      "status": "system-runtime",
-      "owner": "NSObject",
-      "native": null
+      "status": "present",
+      "owner": "TFNTwitterAccount",
+      "native": {
+        "types": "B16@0:8",
+        "address": 4962808
+      }
     },
     {
       "file": "src/Hooks/FeatureSwitches.x",
@@ -1559,9 +1572,12 @@
       "selector": "-isDoubleMaxZoomFor4KImagesEnabled",
       "return": "BOOL",
       "args": "isDoubleMaxZoomFor4KImagesEnabled",
-      "status": "system-runtime",
-      "owner": "NSObject",
-      "native": null
+      "status": "present",
+      "owner": "TFNTwitterAccount",
+      "native": {
+        "types": "B16@0:8",
+        "address": 1881620
+      }
     },
     {
       "file": "src/Hooks/FeatureSwitches.x",
@@ -1582,9 +1598,12 @@
       "selector": "-isLoadingHighestQualityImageVariantPermitted",
       "return": "BOOL",
       "args": "isLoadingHighestQualityImageVariantPermitted",
-      "status": "system-runtime",
-      "owner": "NSObject",
-      "native": null
+      "status": "present",
+      "owner": "TFNTwitterAccount",
+      "native": {
+        "types": "B16@0:8",
+        "address": 1059540
+      }
     },
     {
       "file": "src/Hooks/FeatureSwitches.x",
@@ -2002,122 +2021,106 @@
     {
       "file": "src/Hooks/Likes.x",
       "class": "_TtC16XActivityHistory38ActivityHistoryContainerViewController",
-      "selector": "-numberOfTabsV1In:",
+      "selector": "-numberOfTabsIn:",
       "return": "NSInteger",
-      "args": "numberOfTabsV1In:(id)segmentedController",
-      "status": "system-runtime",
-      "owner": "UIViewController",
-      "native": null
+      "args": "numberOfTabsIn:(id)segmentedController",
+      "status": "present",
+      "owner": "_TtC16XActivityHistory38ActivityHistoryContainerViewController",
+      "native": {
+        "types": "q24@0:8@16",
+        "address": 50231392
+      }
     },
     {
       "file": "src/Hooks/Likes.x",
       "class": "_TtC16XActivityHistory38ActivityHistoryContainerViewController",
-      "selector": "-numberOfTabsV2In:",
-      "return": "NSInteger",
-      "args": "numberOfTabsV2In:(id)segmentedController",
-      "status": "system-runtime",
-      "owner": "UIViewController",
-      "native": null
-    },
-    {
-      "file": "src/Hooks/Likes.x",
-      "class": "_TtC16XActivityHistory38ActivityHistoryContainerViewController",
-      "selector": "-unifiedSegmentedController:v1ViewControllerAtIndex:",
+      "selector": "-segmentedViewController:pageViewControllerAtIndex:",
       "return": "UIViewController*",
-      "args": "unifiedSegmentedController:(id)controller\n                      v1ViewControllerAtIndex:(NSInteger)index",
-      "status": "system-runtime",
-      "owner": "UIViewController",
-      "native": null
+      "args": "segmentedViewController:(id)controller\n                      pageViewControllerAtIndex:(NSInteger)index",
+      "status": "present",
+      "owner": "_TtC16XActivityHistory38ActivityHistoryContainerViewController",
+      "native": {
+        "types": "@32@0:8@16q24",
+        "address": 50231572
+      }
     },
     {
       "file": "src/Hooks/Likes.x",
       "class": "_TtC16XActivityHistory38ActivityHistoryContainerViewController",
-      "selector": "-unifiedSegmentedController:v1TitleAtIndex:",
-      "return": "NSString*",
-      "args": "unifiedSegmentedController:(id)controller\n                         v1TitleAtIndex:(NSInteger)index",
-      "status": "system-runtime",
-      "owner": "UIViewController",
-      "native": null
-    },
-    {
-      "file": "src/Hooks/Likes.x",
-      "class": "_TtC16XActivityHistory38ActivityHistoryContainerViewController",
-      "selector": "-unifiedSegmentedController:v1CaretAtIndex:",
-      "return": "NSInteger",
-      "args": "unifiedSegmentedController:(id)controller\n                         v1CaretAtIndex:(NSInteger)index",
-      "status": "system-runtime",
-      "owner": "UIViewController",
-      "native": null
-    },
-    {
-      "file": "src/Hooks/Likes.x",
-      "class": "_TtC16XActivityHistory38ActivityHistoryContainerViewController",
-      "selector": "-unifiedSegmentedController:v2ViewControllerAtIndex:",
-      "return": "UIViewController*",
-      "args": "unifiedSegmentedController:(id)controller\n                      v2ViewControllerAtIndex:(NSInteger)index",
-      "status": "system-runtime",
-      "owner": "UIViewController",
-      "native": null
-    },
-    {
-      "file": "src/Hooks/Likes.x",
-      "class": "_TtC16XActivityHistory38ActivityHistoryContainerViewController",
-      "selector": "-unifiedSegmentedController:v2DescriptorAtIndex:",
+      "selector": "-segmentedViewController:descriptorAtIndex:",
       "return": "id",
-      "args": "unifiedSegmentedController:(id)controller\n             v2DescriptorAtIndex:(NSInteger)index",
-      "status": "system-runtime",
-      "owner": "UIViewController",
-      "native": null
+      "args": "segmentedViewController:(id)controller\n             descriptorAtIndex:(NSInteger)index",
+      "status": "present",
+      "owner": "_TtC16XActivityHistory38ActivityHistoryContainerViewController",
+      "native": {
+        "types": "@32@0:8@16q24",
+        "address": 50231732
+      }
     },
     {
       "file": "src/Hooks/Likes.x",
       "class": "_TtC16XActivityHistory38ActivityHistoryContainerViewController",
-      "selector": "-unifiedSegmentedController:willSelectViewController:atIndex:indexChanged:",
+      "selector": "-segmentedViewController:willSelectViewController:atIndex:indexChanged:",
       "return": "void",
-      "args": "unifiedSegmentedController:(id)controller\n          willSelectViewController:(UIViewController*)viewController\n                           atIndex:(NSInteger)index\n                      indexChanged:(BOOL)indexChanged",
-      "status": "system-runtime",
-      "owner": "UIViewController",
-      "native": null
+      "args": "segmentedViewController:(id)controller\n          willSelectViewController:(UIViewController*)viewController\n                           atIndex:(NSInteger)index\n                      indexChanged:(BOOL)indexChanged",
+      "status": "present",
+      "owner": "_TtC16XActivityHistory38ActivityHistoryContainerViewController",
+      "native": {
+        "types": "v44@0:8@16@24q32B40",
+        "address": 50231860
+      }
     },
     {
       "file": "src/Hooks/Likes.x",
       "class": "_TtC16XActivityHistory38ActivityHistoryContainerViewController",
-      "selector": "-unifiedSegmentedController:didSelectViewController:atIndex:previousIndex:trigger:",
+      "selector": "-segmentedViewController:didSelectViewController:atIndex:previousIndex:trigger:",
       "return": "void",
-      "args": "unifiedSegmentedController:(id)controller\n           didSelectViewController:(UIViewController*)viewController\n                           atIndex:(NSInteger)index\n                     previousIndex:(NSInteger)previousIndex\n                           trigger:(NSInteger)trigger",
-      "status": "system-runtime",
-      "owner": "UIViewController",
-      "native": null
+      "args": "segmentedViewController:(id)controller\n           didSelectViewController:(UIViewController*)viewController\n                           atIndex:(NSInteger)index\n                     previousIndex:(NSInteger)previousIndex\n                           trigger:(NSInteger)trigger",
+      "status": "present",
+      "owner": "_TtC16XActivityHistory38ActivityHistoryContainerViewController",
+      "native": {
+        "types": "v56@0:8@16@24q32q40q48",
+        "address": 50231944
+      }
     },
     {
       "file": "src/Hooks/Likes.x",
       "class": "_TtC16XActivityHistory38ActivityHistoryContainerViewController",
-      "selector": "-unifiedSegmentedController:didScrollToFractionalIndex:",
+      "selector": "-segmentedViewController:didScrollToFractionalIndex:",
       "return": "void",
-      "args": "unifiedSegmentedController:(id)controller\n        didScrollToFractionalIndex:(double)index",
-      "status": "system-runtime",
-      "owner": "UIViewController",
-      "native": null
+      "args": "segmentedViewController:(id)controller\n        didScrollToFractionalIndex:(double)index",
+      "status": "present",
+      "owner": "_TtC16XActivityHistory38ActivityHistoryContainerViewController",
+      "native": {
+        "types": "v32@0:8@16d24",
+        "address": 50232076
+      }
     },
     {
       "file": "src/Hooks/Likes.x",
       "class": "_TtC16XActivityHistory38ActivityHistoryContainerViewController",
-      "selector": "-unifiedSegmentedController:didTapTabAtIndex:",
+      "selector": "-segmentedViewController:didTapTabAtIndex:",
       "return": "void",
-      "args": "unifiedSegmentedController:(id)controller\n                  didTapTabAtIndex:(NSInteger)index",
-      "status": "system-runtime",
-      "owner": "UIViewController",
-      "native": null
+      "args": "segmentedViewController:(id)controller\n                  didTapTabAtIndex:(NSInteger)index",
+      "status": "present",
+      "owner": "_TtC16XActivityHistory38ActivityHistoryContainerViewController",
+      "native": {
+        "types": "v32@0:8@16q24",
+        "address": 50232176
+      }
     },
     {
       "file": "src/Hooks/Likes.x",
       "class": "_TtC16XActivityHistory38ActivityHistoryContainerViewController",
-      "selector": "-unifiedSegmentedController:didLongPressAtIndex:",
+      "selector": "-segmentedViewController:didLongPressAtIndex:",
       "return": "void",
-      "args": "unifiedSegmentedController:(id)controller\n                didLongPressAtIndex:(NSInteger)index",
-      "status": "system-runtime",
-      "owner": "UIViewController",
-      "native": null
+      "args": "segmentedViewController:(id)controller\n                didLongPressAtIndex:(NSInteger)index",
+      "status": "present",
+      "owner": "_TtC16XActivityHistory38ActivityHistoryContainerViewController",
+      "native": {
+        "types": "v32@0:8@16q24",
+        "address": 50232320
+      }
     },
     {
       "file": "src/Hooks/Likes.x",
@@ -2330,26 +2333,6 @@
     {
       "file": "src/Hooks/Likes.x",
       "class": "T1TabBarViewController",
-      "selector": "-_t1_syncNativeTabBarItems",
-      "return": "void",
-      "args": "_t1_syncNativeTabBarItems",
-      "status": "system-runtime",
-      "owner": "UIViewController",
-      "native": null
-    },
-    {
-      "file": "src/Hooks/Likes.x",
-      "class": "T1TabBarViewController",
-      "selector": "-_t1_syncNativeTabBarSelection",
-      "return": "void",
-      "args": "_t1_syncNativeTabBarSelection",
-      "status": "system-runtime",
-      "owner": "UIViewController",
-      "native": null
-    },
-    {
-      "file": "src/Hooks/Likes.x",
-      "class": "T1TabBarViewController",
       "selector": "-viewDidLayoutSubviews",
       "return": "void",
       "args": "viewDidLayoutSubviews",
@@ -2442,22 +2425,15 @@
     {
       "file": "src/Hooks/MediaDownloads.x",
       "class": "T1VideoDownloadViewModel",
-      "selector": "+urlIfCanDownloadWithAccount:mediaEntity:",
-      "return": "NSURL*",
-      "args": "urlIfCanDownloadWithAccount:(id)account\n                          mediaEntity:\n                              (TFSTwitterEntityMedia*)mediaEntity",
-      "status": "system-runtime",
-      "owner": "NSObject",
-      "native": null
-    },
-    {
-      "file": "src/Hooks/MediaDownloads.x",
-      "class": "T1VideoDownloadViewModel",
-      "selector": "+makeVideDownloaderWithAccount:fromViewController:mediaEntity:statusViewModel:scribeContext:",
+      "selector": "+makeVideDownloaderWithAccount:fromViewController:mediaEntity:statusViewModel:",
       "return": "id",
-      "args": "makeVideDownloaderWithAccount:(id)account\n                 fromViewController:(UIViewController*)viewController\n                        mediaEntity:\n                            (TFSTwitterEntityMedia*)mediaEntity\n                    statusViewModel:(id)statusViewModel\n                      scribeContext:(id)scribeContext",
-      "status": "system-runtime",
-      "owner": "NSObject",
-      "native": null
+      "args": "makeVideDownloaderWithAccount:(id)account\n                 fromViewController:(UIViewController*)viewController\n                        mediaEntity:\n                            (TFSTwitterEntityMedia*)mediaEntity\n                    statusViewModel:(id)statusViewModel",
+      "status": "present",
+      "owner": "T1VideoDownloadViewModel",
+      "native": {
+        "types": "@48@0:8@16@24@32@40",
+        "address": 6481024
+      }
     },
     {
       "file": "src/Hooks/MediaDownloads.x",
@@ -2668,9 +2644,12 @@
       "selector": "-twitterURLForShareWithSParam:",
       "return": "NSString*",
       "args": "twitterURLForShareWithSParam:(unsigned int)sParam",
-      "status": "system-runtime",
-      "owner": "NSObject",
-      "native": null
+      "status": "present",
+      "owner": "TFNTwitterStatus",
+      "native": {
+        "types": "@24@0:8Q16",
+        "address": 4856388
+      }
     },
     {
       "file": "src/Hooks/Misc.x",
@@ -2678,9 +2657,12 @@
       "selector": "+twitterURLForShareWithSParam:username:statusID:",
       "return": "NSString*",
       "args": "twitterURLForShareWithSParam:(unsigned int)sParam\n                                 username:(NSString*)username\n                                 statusID:(long long)statusID",
-      "status": "system-runtime",
-      "owner": "NSObject",
-      "native": null
+      "status": "present",
+      "owner": "TFNTwitterStatus",
+      "native": {
+        "types": "@40@0:8Q16@24q32",
+        "address": 4855572
+      }
     },
     {
       "file": "src/Hooks/Misc.x",
@@ -2688,9 +2670,12 @@
       "selector": "-twitterURLForShare",
       "return": "NSString*",
       "args": "twitterURLForShare",
-      "status": "system-runtime",
-      "owner": "NSObject",
-      "native": null
+      "status": "present",
+      "owner": "TFSTwitterUserReference",
+      "native": {
+        "types": "@16@0:8",
+        "address": 142848
+      }
     },
     {
       "file": "src/Hooks/Misc.x",
@@ -2698,9 +2683,12 @@
       "selector": "-twitterURLForCopy",
       "return": "NSString*",
       "args": "twitterURLForCopy",
-      "status": "system-runtime",
-      "owner": "NSObject",
-      "native": null
+      "status": "present",
+      "owner": "TFSTwitterUserReference",
+      "native": {
+        "types": "@16@0:8",
+        "address": 142856
+      }
     },
     {
       "file": "src/Hooks/Misc.x",
@@ -2728,9 +2716,10 @@
       "selector": "-actionButtonProviders",
       "return": "NSArray*",
       "args": "actionButtonProviders",
-      "status": "system-runtime",
+      "status": "guarded-runtime-alternative",
       "owner": "UIViewController",
-      "native": null
+      "native": null,
+      "runtime_guard": "BHTLegacyProfileActionProviders"
     },
     {
       "file": "src/Hooks/Profile.x",
@@ -3032,9 +3021,10 @@
       "selector": "-_network_finalizeDidCompleteTask:URLSession:error:",
       "return": "void",
       "args": "_network_finalizeDidCompleteTask:(NSURLSessionTask*)task\n                              URLSession:(NSURLSession*)session\n                                   error:(NSError*)error",
-      "status": "system-runtime",
+      "status": "guarded-runtime-alternative",
       "owner": "NSOperation",
-      "native": null
+      "native": null,
+      "runtime_guard": "BHTNativeReplyTNLCompletionHooks"
     },
     {
       "file": "src/Hooks/ReplyNetworkDiagnostics.x",
@@ -4072,7 +4062,10 @@
       "feature": "images",
       "class": "TFNTwitterAccount",
       "selector": "-isLoadingHighestQualityImageVariantPermitted",
-      "native": null
+      "native": {
+        "types": "B16@0:8",
+        "address": 1059540
+      }
     },
     {
       "feature": "images",
@@ -4087,7 +4080,10 @@
       "feature": "images",
       "class": "TFNTwitterAccount",
       "selector": "-isDoubleMaxZoomFor4KImagesEnabled",
-      "native": null
+      "native": {
+        "types": "B16@0:8",
+        "address": 1881620
+      }
     },
     {
       "feature": "video",
@@ -4119,14 +4115,11 @@
     {
       "feature": "video",
       "class": "T1VideoDownloadViewModel",
-      "selector": "+urlIfCanDownloadWithAccount:mediaEntity:",
-      "native": null
-    },
-    {
-      "feature": "video",
-      "class": "T1VideoDownloadViewModel",
-      "selector": "+makeVideDownloaderWithAccount:fromViewController:mediaEntity:statusViewModel:scribeContext:",
-      "native": null
+      "selector": "+makeVideDownloaderWithAccount:fromViewController:mediaEntity:statusViewModel:",
+      "native": {
+        "types": "@48@0:8@16@24@32@40",
+        "address": 6481024
+      }
     },
     {
       "feature": "video",

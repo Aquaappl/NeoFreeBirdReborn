@@ -14,9 +14,12 @@ builds require a decrypted X 12.24.1 IPA that you are legally authorized to use.
 
 ## Compatibility
 
-Beta 51 uses native media dimensions before loading Likes thumbnails, applies
-image-size corrections during scrolling, and saves sidebar visibility/order
-changes immediately. Sidebar choices are reapplied when X republishes its rows.
+Beta 52 updates the Likes destination editor for X's current segmented
+controller, saves its choices immediately, and adds Try Grok Bot to sidebar
+visibility controls. Downloads, restore buttons, and Undo send use readable
+labels. For You filters now resolve the current Home provider's primary feed
+and inspect original text and native mention entities. The earlier scrolling
+and sidebar persistence improvements remain included.
 See the [12.24.1 audit](docs/X12_24_1_FEATURE_AUDIT.md) for the static checks and
 the remaining device validation.
 

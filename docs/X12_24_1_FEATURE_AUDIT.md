@@ -15,15 +15,55 @@ does not mean the active feature's implementation is missing.
 
 | Classification | Methods | Meaning |
 | --- | ---: | --- |
-| Native method found | 201 | Present on the hooked class, a parent, or an app-supplied category |
-| System runtime | 58 | UIKit/Foundation and other system implementations are outside the IPA; validate at runtime |
+| Native method found | 220 | Present on the hooked class, a parent, or an app-supplied category |
+| System runtime | 30 | UIKit/Foundation and other system implementations are outside the IPA; validate at runtime |
 | Tweak additions | 9 | `%new` methods supplied by the tweak |
+| Guarded runtime alternative | 2 | Removed legacy profile provider and private network finalizer; constructors skip them when absent. The network diagnostic uses its verified delegate fallback |
 | Guarded legacy alias | 5 | Old Home class alias absent; its constructor checks prevent registration. The current mangled Home class is present |
 
 No remaining unguarded Logos hook references a missing app class or method.
 Presence and matching metadata do **not** establish device behavior or server
 acceptance. Dynamic theme-provider replacements continue checking the active
 provider and method shapes at runtime.
+
+The beta 52 audit corrects two beta 51 inventory errors: an unknown app
+selector is no longer accepted merely because its parent is NSObject or
+UIViewController, and categories discovered before their class body are no
+longer overwritten. There are **266 declarations** in this source snapshot.
+The corrected audit exposes optional legacy methods separately from working
+hooks. In particular, the legacy Copy Profile Info provider is unavailable in
+this target's catalog-based profile header; it is guarded rather than claimed
+as verified functionality.
+
+## Follow-up fixes in beta 52
+
+- Activity History now calls `numberOfTabsIn:` and
+  `segmentedViewController:pageViewControllerAtIndex:` / `descriptorAtIndex:`
+  through `TFNUISwift.LegacySegmentedViewController`. The old unified V1/V2
+  callbacks no longer exist in this IPA. The remap activates only after the
+  native four-page initialization and only under the custom Likes parent.
+  Bookmarks, Videos, Articles, and Likes preserve the same native page order.
+  Saving a changed selection reloads the actual native controller, keeps the
+  current destination when possible, and records applied pages/native count
+  in the compatibility report. Unknown tab counts preserve native behavior.
+- The Likes editor saves taps, reorders, and waterfall changes immediately.
+- Try Grok Bot is identified by its native `grok_bot_logo` asset (or its title)
+  and can be hidden/reordered in the sidebar editor. The existing Hide Grok in
+  sidebar toggle also hides it. Native refreshes still reapply the choice.
+- The current Home container's eager and lazy providers both retain
+  `homeTimelineViewController` independently from their Following/filtered
+  controllers. Swift reflection reads that explicit owner; the filter compares
+  it with the actual URT controller's ancestry. Unknown ownership falls back
+  to the guarded legacy timeline identity path, never a selected-tab guess.
+- Matching includes canonical original text and native user-mention entities
+  after X removes unmentioned users. Direct status and composition rows are
+  handled too. Cache keys still include the filter generation and extracted
+  content. Quote-only text does not enter the primary-text candidates.
+- Download progress says **Downloading…**, layout reset actions say
+  **Restore defaults**, and Undo send presents **Off — send immediately** or
+  a duration such as **10 seconds**, with an explanatory message.
+- The native download factory now uses its current four-argument selector.
+  Removed URL-factory and native-tab-sync hooks were retired.
 
 Changes from the previous target:
 
@@ -81,26 +121,29 @@ these addresses are audit evidence, not additional hard-coded calls.
 
 ## Validation and package
 
-- Source invariant check: passed, 80 settings and 25 localized subsections.
-- Branding regression tests: passed on the macOS runner.
-- Sidebar executable tests: passed for native republication, localization,
-  duplicate preferences, hide-all, restoration of current row values, and
-  observer idempotence.
-- arm64 sideload build: [successful run](https://github.com/Vicitiniman/NeoFreeBirdReborn/actions/runs/34254641491),
-  compiled source commit `244de80`.
-- The local packager checks the input IPA's audit hash, required hook exports,
-  Mach-O layouts, unchanged executable instruction sections, archive CRCs,
-  duplicate entries, and settings resources. It retains the host signature blob
-  for entitlement extraction by the user's signer; signing hashes must be
-  regenerated during sideloading.
+The corrected local hook audit and source checks passed. Executable regression
+checks cover sidebar republication/Grok Bot, eager/lazy Home ownership,
+canonical leading mentions, mention entities, changing cached text, quoted
+post isolation, filter removal, and every Likes destination mapping. The
+beta 52 macOS build and these native checks are tracked in
+[Actions](https://github.com/Vicitiniman/NeoFreeBirdReborn/actions/runs/34293645854)
+for source commit `a1efbfb`.
 
-The output IPA is unsigned and requires the user's usual sideload signer.
-No device execution has been performed. The remaining acceptance pass is:
-open the app and settings; scroll Likes continuously with portrait/landscape
-media and pinch the grid; hide Lists/News, leave via Back, reopen the drawer,
-switch accounts, and relaunch; then exercise media viewing/downloads, native
-sign-in/replies, and themes on the device. Network-backed features still depend
-on the host app and X's services.
+The local packager validates the input hash, injected library dependencies and
+Mach-O layouts, unchanged instruction sections, ZIP CRCs, and bundle resources.
+Its output is unsigned and requires the user's normal sideload signer.
+
+The supplied beta 51 device report confirms X 12.24.1/iOS 18.7.2 and the old
+Activity History wrapper. Filters were cleared before that report, so zero
+filter counters cannot identify an observed match failure. No beta 52 device
+execution is claimed. The remaining acceptance checks are:
+
+- Pick each Likes destination, return via Back, and verify Posts shows it.
+- Hide Try Grok Bot, refresh/reopen the sidebar, and relaunch.
+- Add `grok` to either For You filter and check explicit @grok posts disappear;
+  switch to Following and verify it stays unfiltered. Keep filters enabled if
+  exporting a report to diagnose a remaining failure.
+- Download a photo, GIF, and video; inspect the progress and restore/Undo labels.
 
 Reproduce the inventory with Python 3.11+ and `lief` installed:
 
