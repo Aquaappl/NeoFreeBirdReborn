@@ -31,6 +31,11 @@ void BHTRecordLikesNavigationConfiguration(NSInteger nativeCount,
 // allowing the caller to suppress X's saved scroll-position restoration.
 BOOL BHTCaptureLikesSections(UIViewController* dataViewController, NSArray* sections);
 
+// Reuses the waterfall and viewer inside a native profile Photos/Videos tab.
+// Each wrapper owns only the native feed supplied by that profile's factory.
+UIViewController* BHTProfileMediaController(UIViewController* nativeController,
+                                           NSString* mediaKind);
+
 // Called when the real tab changes from unselected to selected. It reconnects
 // the retained native controller without changing its scroll position.
 void BHTActivateLikesTabView(UIView* tabView);

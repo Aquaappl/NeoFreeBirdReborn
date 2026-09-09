@@ -1,4 +1,4 @@
-# X 12.24.1 compatibility update — beta 51
+# X 12.24.1 compatibility update — beta 53
 
 Target: `com.atebits.Tweetie2`, X **12.24.1 build 1**, arm64, minimum iOS 15.0.
 The supplied IPA contains 61 Mach-O images; all inspected encryption flags are
@@ -15,7 +15,7 @@ does not mean the active feature's implementation is missing.
 
 | Classification | Methods | Meaning |
 | --- | ---: | --- |
-| Native method found | 220 | Present on the hooked class, a parent, or an app-supplied category |
+| Native method found | 222 | Present on the hooked class, a parent, or an app-supplied category |
 | System runtime | 30 | UIKit/Foundation and other system implementations are outside the IPA; validate at runtime |
 | Tweak additions | 9 | `%new` methods supplied by the tweak |
 | Guarded runtime alternative | 2 | Removed legacy profile provider and private network finalizer; constructors skip them when absent. The network diagnostic uses its verified delegate fallback |
@@ -29,11 +29,47 @@ provider and method shapes at runtime.
 The beta 52 audit corrects two beta 51 inventory errors: an unknown app
 selector is no longer accepted merely because its parent is NSObject or
 UIViewController, and categories discovered before their class body are no
-longer overwritten. There are **266 declarations** in this source snapshot.
+longer overwritten. There are **268 declarations** in this source snapshot.
 The corrected audit exposes optional legacy methods separately from working
 hooks. In particular, the legacy Copy Profile Info provider is unavailable in
 this target's catalog-based profile header; it is guarded rather than claimed
 as verified functionality.
+
+## Follow-up fixes in beta 53
+
+- The current `GrokBotSidebarUpsell` initializer in XAppLibraries checks
+  `grok_ios_grok_bot_sidebar_enabled`. It is not a normal Dash item, so
+  filtering `primaryItems`/`folderItems`/`tertiaryItems` does not remove it.
+  The existing feature-switch funnel now returns false for this exact key
+  while `hide_grok_sidebar` is enabled. Other Grok promotion surfaces remain
+  on their native gates. The existing saved preference and default survive
+  moving the control to **Edit navigation bar**; it saves immediately and
+  explains that X must be closed and reopened to rebuild the cached upsell.
+  The duplicate sidebar tile and Grok-page switch were removed. Search routes
+  directly to the new navigation-editor control.
+- `T1ProfileDisplayNormalMainContentProvider` still exposes
+  `_generatePhotoViewController` and `_generateVideoViewController` with
+  object-returning, argument-free signatures. Their native T1URT feeds are
+  wrapped with the existing waterfall, thumbnail pipeline and media viewer.
+  Native profile tabs, header and Follow actions remain intact. Photos and
+  Videos use separate native feeds and separate snapshot collections; no
+  account, cursor or profile identity is synthesized.
+- The wrapper exposes `tfn_contentScrollView` and forwards the verified native
+  scroll callbacks used by the resizable profile header. Backend pagination
+  scrolls do not propagate into that header. Empty/loading/error views come
+  from X when no media is available. Pull to refresh uses native `loadTop:`.
+  Complete section snapshots replace the old media list, including deletions
+  and cleared access states, while known decoded image dimensions survive a
+  refreshed snapshot. The Likes-specific page remapping and newest-position
+  guard do not run for profiles.
+- **Profiles > Profile media waterfall** is enabled by default and can be
+  disabled for native presentation. The compatibility export includes its
+  value plus per-kind factory, section-update, captured-item and visibility
+  observations under `likesRuntime`; it exports no new account IDs or text.
+- Native regression fixtures cover snapshot replacement, empty/access states,
+  image-dimension continuity, isolated feeds and the exact Grok promotion
+  switch. Device interaction remains an acceptance check, not a claim based
+  on static method presence.
 
 ## Follow-up fixes in beta 52
 
@@ -47,9 +83,9 @@ as verified functionality.
   current destination when possible, and records applied pages/native count
   in the compatibility report. Unknown tab counts preserve native behavior.
 - The Likes editor saves taps, reorders, and waterfall changes immediately.
-- Try Grok Bot is identified by its native `grok_bot_logo` asset (or its title)
-  and can be hidden/reordered in the sidebar editor. The existing Hide Grok in
-  sidebar toggle also hides it. Native refreshes still reapply the choice.
+- The legacy Grok row matcher was extended in beta 52; the device report
+  showed that the separate current promotion still appeared. Beta 53 targets
+  that promotion directly, as described below.
 - The current Home container's eager and lazy providers both retain
   `homeTimelineViewController` independently from their Following/filtered
   controllers. Swift reflection reads that explicit owner; the filter compares
@@ -59,8 +95,8 @@ as verified functionality.
   after X removes unmentioned users. Direct status and composition rows are
   handled too. Cache keys still include the filter generation and extracted
   content. Quote-only text does not enter the primary-text candidates.
-- Download progress says **Downloading�**, layout reset actions say
-  **Restore defaults**, and Undo send presents **Off � send immediately** or
+- Download progress says **Downloading…**, layout reset actions say
+  **Restore defaults**, and Undo send presents **Off — send immediately** or
   a duration such as **10 seconds**, with an explanatory message.
 - The native download factory now uses its current four-argument selector.
   Removed URL-factory and native-tab-sync hooks were retired.
@@ -135,11 +171,16 @@ Its output is unsigned and requires the user's normal sideload signer.
 
 The supplied beta 51 device report confirms X 12.24.1/iOS 18.7.2 and the old
 Activity History wrapper. Filters were cleared before that report, so zero
-filter counters cannot identify an observed match failure. No beta 52 device
-execution is claimed. The remaining acceptance checks are:
+filter counters cannot identify an observed match failure. The beta 52 report confirms the current Likes page remap was applied and
+shows the Grok promotion issue addressed above. No beta 53 device execution
+is claimed. The remaining acceptance checks are:
 
 - Pick each Likes destination, return via Back, and verify Posts shows it.
-- Hide Try Grok Bot, refresh/reopen the sidebar, and relaunch.
+- In Edit navigation bar, hide Try Grok Bot and fully reopen X. Test both
+  visibility choices across another relaunch.
+- Open two different profiles, switch between Photos and Videos, scroll past
+  the first page, refresh, pinch columns, view media and return. Verify the
+  header and Follow action, native empty/error states, and no mixed accounts.
 - Add `grok` to either For You filter and check explicit @grok posts disappear;
   switch to Following and verify it stays unfiltered. Keep filters enabled if
   exporting a report to diagnose a remaining failure.

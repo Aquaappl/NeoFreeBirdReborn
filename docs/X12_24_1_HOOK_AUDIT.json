@@ -497,7 +497,7 @@
     }
   ],
   "counts": {
-    "present": 220,
+    "present": 222,
     "system-runtime": 30,
     "new": 9,
     "guarded-runtime-alternative": 2,
@@ -2709,6 +2709,32 @@
       "status": "system-runtime",
       "owner": "NSNotificationCenter",
       "native": null
+    },
+    {
+      "file": "src/Hooks/Profile.x",
+      "class": "T1ProfileDisplayNormalMainContentProvider",
+      "selector": "-_generatePhotoViewController",
+      "return": "UIViewController*",
+      "args": "_generatePhotoViewController",
+      "status": "present",
+      "owner": "T1ProfileDisplayNormalMainContentProvider",
+      "native": {
+        "types": "@16@0:8",
+        "address": 2275512
+      }
+    },
+    {
+      "file": "src/Hooks/Profile.x",
+      "class": "T1ProfileDisplayNormalMainContentProvider",
+      "selector": "-_generateVideoViewController",
+      "return": "UIViewController*",
+      "args": "_generateVideoViewController",
+      "status": "present",
+      "owner": "T1ProfileDisplayNormalMainContentProvider",
+      "native": {
+        "types": "@16@0:8",
+        "address": 2276368
+      }
     },
     {
       "file": "src/Hooks/Profile.x",

@@ -165,12 +165,6 @@ void BHTRecordSidebarAddAccountRefreshRequested(void) {
             TabTitleKey:
                 [bundle localizedStringForKey:@"SIDEBAR_FOLLOW_REQUESTS_TITLE"],
             TabImageKey: @"sf:person.badge.clock"
-        },
-        @{
-            TabPageKey: BHTSidebarGrokBotItemID,
-            TabTitleKey:
-                [bundle localizedStringForKey:@"SIDEBAR_GROK_BOT_TITLE"],
-            TabImageKey: @"sf:sparkles"
         }
     ];
 }

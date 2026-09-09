@@ -114,8 +114,12 @@ public final class BHTSidebarRuntime: NSObject {
             uniqueKeysWithValues: visible.enumerated().map { ($1, $0) }
         )
         var selected = Set(visible)
-        if UserDefaults.standard.bool(forKey: "hide_grok_sidebar") {
+        // The promotion has a dedicated navigation-editor switch. Keep older
+        // row-based hosts in sync without making a second visibility choice.
+        if (UserDefaults.standard.object(forKey: "hide_grok_sidebar") as? NSNumber)?.boolValue ?? true {
             selected.remove("grok_bot")
+        } else {
+            selected.insert("grok_bot")
         }
         var changed = false
 

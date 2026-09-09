@@ -34,6 +34,28 @@ void BHTRecordForYouFilterDiagnostic(BHTForYouFilterDiagnosticEvent event) {}
     unit += section(source, "@interface BHTForYouKeywordDecisionCache", "static NSMutableArray<BHTHomeTimelineRegistryEntry*>")
     unit += section(source, "static const char* SkipObjCTypeQualifiers", "static UIViewController* NearestURTTimelineController")
     unit += section(source, "static BOOL BHTIsKeywordStatusViewModel", "static BOOL BHTShouldHideForYouKeywordItemInURTController")
+    media_source = (ROOT / "src/Likes/BHTLikesTab.m").read_text(encoding="utf8")
+    switches = (ROOT / "src/Hooks/FeatureSwitches.x").read_text(encoding="utf8")
+    unit += '''
+@interface BHTLikedMediaItem : NSObject
+@property(nonatomic, copy) NSString* identifier;
+@property(nonatomic) double aspectRatio;
+@property(nonatomic) BOOL aspectRatioConfirmedByImage;
+@end
+@implementation BHTLikedMediaItem
+@end
+@interface BHTSettings : NSObject
++ (BOOL)boolForKey:(NSString*)key;
+@end
+@implementation BHTSettings
++ (BOOL)boolForKey:(NSString*)key { return [NSUserDefaults.standardUserDefaults boolForKey:key]; }
+@end
+static BOOL ReportGenuineTabGates = NO;
+static BOOL AccountIsGenuinelyPremium(void) { return NO; }
+'''
+    unit += section(media_source, "static NSArray<BHTLikedMediaItem*>* BHTProfileMediaSnapshot", "@protocol BHTWaterfallLayoutDelegate")
+    unit += section(switches, "static NSNumber* FeatureSwitchOverrideValueForKey", "// Every feature switch facade")
+    unit += (ROOT / "tests/ProfileMediaTests.m").read_text(encoding="utf8")
     unit += (ROOT / "tests/TimelineKeywordTests.m").read_text(encoding="utf8")
     if args.emit_only:
         args.emit_only.write_text(unit, encoding="utf8")

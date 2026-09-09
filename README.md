@@ -14,12 +14,12 @@ builds require a decrypted X 12.24.1 IPA that you are legally authorized to use.
 
 ## Compatibility
 
-Beta 52 updates the Likes destination editor for X's current segmented
-controller, saves its choices immediately, and adds Try Grok Bot to sidebar
-visibility controls. Downloads, restore buttons, and Undo send use readable
-labels. For You filters now resolve the current Home provider's primary feed
-and inspect original text and native mention entities. The earlier scrolling
-and sidebar persistence improvements remain included.
+Beta 53 adds the waterfall viewer to profiles' Photos and Videos tabs. The
+profile keeps its native header, Follow action, loading and access states.
+**Hide Try Grok Bot** now lives in **Edit navigation bar** and targets the
+separate sidebar promotion in X 12.24.1. Reopen X after changing this switch.
+Earlier Likes navigation, scrolling, filtering, download-label and sidebar
+persistence fixes remain included.
 See the [12.24.1 audit](docs/X12_24_1_FEATURE_AUDIT.md) for the static checks and
 the remaining device validation.
 
@@ -60,6 +60,9 @@ preserved where possible.
   filtered by either list.
 - A Posts/Media selector in Likes with an adaptive, pinch-adjustable waterfall
   that respects each item's aspect ratio.
+- The same waterfall and media viewer in profile Photos/Videos tabs, enabled
+  under **Profiles > Profile media waterfall**. Each native profile feed stays
+  separate; pull to refresh or continue scrolling to load older media.
 - Full-window photo and video viewing on iPhone and iPad, original-quality
   photos, highest-available MP4 playback, zoom, paging, and swipe-down dismiss.
 - Native-style photo, video, and GIF menus with configurable download and share

@@ -98,7 +98,7 @@ struct SidebarRuntimeTests {
         defaults.set(false, forKey: "hide_grok_sidebar")
         defaults.set([String](), forKey: key)
         _ = BHTSidebarRuntime.applyResult(forDashContentController: controller)
-        precondition(source.primaryItems.isEmpty, "The sidebar editor can hide the bot independently")
+        precondition(source.primaryItems.map(\.title) == ["Try Grok Bot"], "Only the navigation switch controls the legacy bot row after moving its editor")
         defaults.set(["grok_bot"], forKey: key)
         _ = BHTSidebarRuntime.applyResult(forDashContentController: controller)
         precondition(source.primaryItems.map(\.title) == ["Try Grok Bot"])

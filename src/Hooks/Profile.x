@@ -4,6 +4,22 @@
 //
 
 #import "HookHelpers.h"
+#import "Likes/BHTLikesTab.h"
+
+// Keep the profile's native Photos/Videos tabs and account-scoped feeds.
+// Only their presentation is wrapped; the native provider still decides
+// whether media is accessible and performs authenticated cursor loading.
+%hook T1ProfileDisplayNormalMainContentProvider
+
+- (UIViewController*)_generatePhotoViewController {
+    return BHTProfileMediaController(%orig, @"photos");
+}
+
+- (UIViewController*)_generateVideoViewController {
+    return BHTProfileMediaController(%orig, @"videos");
+}
+
+%end
 
 // MARK: - Copy profile info
 
