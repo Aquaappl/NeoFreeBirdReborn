@@ -14,8 +14,9 @@ builds require a decrypted X 12.24.1 IPA that you are legally authorized to use.
 
 ## Compatibility
 
-Beta 53 adds the waterfall viewer to profiles' Photos and Videos tabs. The
-profile keeps its native header, Follow action, loading and access states.
+Beta 54 corrects the profile waterfall's alignment below the header, adds
+**Profiles > Default to Photos**, and removes the blank sidebar editor tile.
+The profile keeps its native header, Follow action, loading and access states.
 **Hide Try Grok Bot** now lives in **Edit navigation bar** and targets the
 separate sidebar promotion in X 12.24.1. Reopen X after changing this switch.
 Earlier Likes navigation, scrolling, filtering, download-label and sidebar
@@ -63,6 +64,8 @@ preserved where possible.
 - The same waterfall and media viewer in profile Photos/Videos tabs, enabled
   under **Profiles > Profile media waterfall**. Each native profile feed stays
   separate; pull to refresh or continue scrolling to load older media.
+- **Default to Photos** puts Photos first in the profile media menu while
+  keeping Videos available. Enabled by default; applies to newly opened profiles.
 - Full-window photo and video viewing on iPhone and iPad, original-quality
   photos, highest-available MP4 playback, zoom, paging, and swipe-down dismiss.
 - Native-style photo, video, and GIF menus with configurable download and share

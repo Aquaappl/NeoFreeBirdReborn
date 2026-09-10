@@ -88,19 +88,9 @@ void BHTRecordSidebarAddAccountRefreshRequested(void) {
 @implementation BHTSidebarNavigationUtility
 
 + (NSArray<NSString*>*)canonicalItemIDs {
-    return @[
-        BHTSidebarProfileItemID,
-        BHTSidebarBlueItemID,
-        BHTSidebarHistoryItemID,
-        BHTSidebarCommunitiesItemID,
-        BHTSidebarNewsItemID,
-        BHTSidebarListsItemID,
-        BHTSidebarChatItemID,
-        BHTSidebarNotificationsItemID,
-        BHTSidebarSpacesItemID,
-        BHTSidebarFollowRequestsItemID,
-        BHTSidebarGrokBotItemID
-    ];
+    // Only create selectable tiles that have a title and icon. Legacy Grok
+    // rows are controlled independently by the navigation editor's switch.
+    return [[self availableItems] valueForKey:TabPageKey];
 }
 
 + (NSArray<NSDictionary*>*)availableItems {

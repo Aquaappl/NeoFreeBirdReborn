@@ -146,6 +146,8 @@
 "NAV_HIDE_GROK_BOT_DETAIL" = "Hide the promotion in the sidebar. Saves automatically; close and reopen the app to apply.";
 "PROFILE_MEDIA_WATERFALL_TITLE" = "Profile media waterfall";
 "PROFILE_MEDIA_WATERFALL_DETAIL" = "Browse profile photos and videos at their natural proportions. Pinch to change columns; tap to open full screen. Applies when you reopen a profile.";
+"PROFILE_MEDIA_DEFAULT_PHOTOS_TITLE" = "Default to Photos";
+"PROFILE_MEDIA_DEFAULT_PHOTOS_DETAIL" = "Show Photos first in the profile media menu. You can still switch to Videos. Applies when you reopen a profile.";
 
 "HIDE_GROK_CREATE_TITLE" = "Hide Grok creation buttons";
 "HIDE_GROK_CREATE_DETAIL" = "Removes the options to create or edit images and videos with Grok.";

@@ -1,4 +1,4 @@
-# X 12.24.1 compatibility update — beta 53
+# X 12.24.1 compatibility update — beta 54
 
 Target: `com.atebits.Tweetie2`, X **12.24.1 build 1**, arm64, minimum iOS 15.0.
 The supplied IPA contains 61 Mach-O images; all inspected encryption flags are
@@ -15,7 +15,7 @@ does not mean the active feature's implementation is missing.
 
 | Classification | Methods | Meaning |
 | --- | ---: | --- |
-| Native method found | 222 | Present on the hooked class, a parent, or an app-supplied category |
+| Native method found | 223 | Present on the hooked class, a parent, or an app-supplied category |
 | System runtime | 30 | UIKit/Foundation and other system implementations are outside the IPA; validate at runtime |
 | Tweak additions | 9 | `%new` methods supplied by the tweak |
 | Guarded runtime alternative | 2 | Removed legacy profile provider and private network finalizer; constructors skip them when absent. The network diagnostic uses its verified delegate fallback |
@@ -25,6 +25,32 @@ No remaining unguarded Logos hook references a missing app class or method.
 Presence and matching metadata do **not** establish device behavior or server
 acceptance. Dynamic theme-provider replacements continue checking the active
 provider and method shapes at runtime.
+
+## Follow-up fixes in beta 54
+
+- The profile header propagates its expanded height using additional safe-area
+  insets (`_t1_updateContentViewControllerSafeAreaInsets`, T1Twitter `0x58c18c`).
+  Its offset bounds use the scroll view's raw `contentInset`, not UIKit's
+  `adjustedContentInset` (`0x58d348`). The gallery now applies this top safe area
+  explicitly and preserves `offset + topInset` when the header size changes,
+  matching TFNDataViewController's offset update in TwitterSPMMigration
+  (`0xcdeaa8`). It no longer overwrites the native backend's own insets.
+  Image cells and full-screen photos retain Aspect Fit.
+- **Profiles > Default to Photos**, enabled by default, moves the native photo
+  entry to the front of its existing media group. The verified
+  `contentMainEntries` method (`0x2298e8`) creates a Videos/Photos group; the
+  profile chooses inner index zero by default (`_activeEntryAtGroupIndex:`,
+  `0x3fc8d4`). Groups are matched by entry identity without assuming an outer
+  index. Order stays fixed for each provider so changing preferences cannot
+  reinterpret its active selection. New profiles pick up the saved preference.
+- The sidebar editor derives its IDs from its titled/icon-bearing metadata,
+  eliminating the orphan Grok tile after Follower requests. Existing stored
+  layouts are sanitized against that list. The independent Grok navigation
+  switch and legacy runtime row filtering remain in place.
+- Native regression fixtures cover menu ordering across different group
+  positions, repeated menu reads, missing tabs, and offset preservation for
+  first display, header changes, rotation and pull-to-refresh. Physical-device
+  layout and gestures still require an acceptance check.
 
 The beta 52 audit corrects two beta 51 inventory errors: an unknown app
 selector is no longer accepted merely because its parent is NSObject or

@@ -1709,7 +1709,7 @@ static NSDictionary* BHTSettingsSnapshot(void) {
         @"hide_timeline_prompts", @"hide_discover_more", @"hide_topics",
         @"hide_topics_to_follow", @"hide_spaces", @"hide_custom_timelines",
         @"remember_timeline_tab", @"enable_likes_tab",
-        @"likes_media_waterfall", @"profile_media_waterfall", @"enable_grok_translations",
+        @"likes_media_waterfall", @"profile_media_waterfall", @"profile_media_default_photos", @"enable_grok_translations",
         @"hide_grok_analyze", @"hide_grok_sidebar", @"hide_grok_create",
         @"disable_auto_translate", @"download_videos", @"dm_media_downloads",
         @"voice_creation_enabled", @"no_voice_messages", @"old_compose_bar",

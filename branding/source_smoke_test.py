@@ -4104,11 +4104,11 @@ def main() -> None:
             "navigation delegate"
         )
 
-    if "Version: 6.1.0-beta.53" not in (
+    if "Version: 6.1.0-beta.54" not in (
         ROOT / "control"
     ).read_text(encoding="utf-8"):
         raise AssertionError(
-            "Profile media and Grok promotion fixes must ship as beta.53"
+            "Profile gallery alignment and Photos default must ship as beta.54"
         )
 
     branding_source = (

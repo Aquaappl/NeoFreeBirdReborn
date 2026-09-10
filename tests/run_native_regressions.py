@@ -17,6 +17,7 @@ def main():
     args = parser.parse_args()
     source = (ROOT / "src/Hooks/Timeline.x").read_text(encoding="utf8")
     unit = '''#import <Foundation/Foundation.h>
+#import <CoreGraphics/CoreGraphics.h>
 #import <objc/message.h>
 #import <objc/runtime.h>
 #include <string.h>
@@ -54,6 +55,8 @@ static BOOL ReportGenuineTabGates = NO;
 static BOOL AccountIsGenuinelyPremium(void) { return NO; }
 '''
     unit += section(media_source, "static NSArray<BHTLikedMediaItem*>* BHTProfileMediaSnapshot", "@protocol BHTWaterfallLayoutDelegate")
+    profile_source = (ROOT / "src/Hooks/Profile.x").read_text(encoding="utf8")
+    unit += section(profile_source, "static NSArray* BHTProfileMainEntriesWithPhotosFirst", "// Keep the profile's native")
     unit += section(switches, "static NSNumber* FeatureSwitchOverrideValueForKey", "// Every feature switch facade")
     unit += (ROOT / "tests/ProfileMediaTests.m").read_text(encoding="utf8")
     unit += (ROOT / "tests/TimelineKeywordTests.m").read_text(encoding="utf8")

@@ -497,7 +497,7 @@
     }
   ],
   "counts": {
-    "present": 222,
+    "present": 223,
     "system-runtime": 30,
     "new": 9,
     "guarded-runtime-alternative": 2,
@@ -2709,6 +2709,19 @@
       "status": "system-runtime",
       "owner": "NSNotificationCenter",
       "native": null
+    },
+    {
+      "file": "src/Hooks/Profile.x",
+      "class": "T1ProfileDisplayNormalMainContentProvider",
+      "selector": "-contentMainEntries",
+      "return": "NSArray*",
+      "args": "contentMainEntries",
+      "status": "present",
+      "owner": "T1ProfileDisplayNormalMainContentProvider",
+      "native": {
+        "types": "@16@0:8",
+        "address": 2267368
+      }
     },
     {
       "file": "src/Hooks/Profile.x",

@@ -536,6 +536,14 @@ static NSArray<BHTLikedMediaItem*>* BHTProfileMediaSnapshot(
     return incoming ?: @[];
 }
 
+static CGFloat BHTProfileMediaOffsetForTopInset(CGFloat offsetY,
+                                               CGFloat previousTop,
+                                               CGFloat nextTop) {
+    // Match TFNDataViewController's safe-area update: retain the distance
+    // scrolled from the first item, including a partially collapsed header.
+    return offsetY + previousTop - nextTop;
+}
+
 @protocol BHTWaterfallLayoutDelegate <NSObject>
 - (CGFloat)waterfallAspectRatioAtIndexPath:(NSIndexPath*)indexPath;
 @end
@@ -2501,6 +2509,7 @@ static void BHTRefreshNativeTabViewAppearance(T1TabView* tabView);
                                                        BHTWaterfallLayoutDelegate>
 @property(nonatomic, strong) UIViewController* postsController;
 @property(nonatomic, copy) NSString* profileMediaKind;
+@property(nonatomic) BOOL updatingProfileMediaInsets;
 @property(nonatomic, strong) UISegmentedControl* selector;
 @property(nonatomic, strong) UICollectionView* collectionView;
 @property(nonatomic, strong) BHTWaterfallLayout* waterfallLayout;
@@ -2541,6 +2550,7 @@ static void BHTRefreshNativeTabViewAppearance(T1TabView* tabView);
 - (instancetype)initWithPostsController:(UIViewController*)controller
                        profileMediaKind:(NSString*)kind;
 - (void)updateProfileMediaVisibility;
+- (void)updateProfileMediaInsets;
 - (void)refreshProfileMedia:(UIRefreshControl*)sender;
 - (void)forwardProfileScrollEvent:(NSString*)name scrollView:(UIScrollView*)scrollView;
 @end
@@ -2849,6 +2859,9 @@ static UIScrollView* BHTFindScrollableView(UIView* view) {
         [self.view addSubview:self.collectionView];
         if (self.profileMediaKind) {
             self.collectionView.alwaysBounceVertical = YES;
+            // X's header reads contentInset itself, not adjustedContentInset.
+            // Apply its propagated safe area explicitly, as its TFN data
+            // controller does, instead of letting UIKit add it a second time.
             self.collectionView.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentNever;
             UIRefreshControl* refresh = [UIRefreshControl new];
             [refresh addTarget:self action:@selector(refreshProfileMedia:)
@@ -3641,6 +3654,7 @@ static UIScrollView* BHTFindScrollableView(UIView* view) {
 }
 
 - (void)scrollViewDidScroll:(UIScrollView*)scrollView {
+    if (self.updatingProfileMediaInsets && scrollView == self.collectionView) return;
     if (self.profileMediaKind && scrollView == self.collectionView) {
         SEL event = NSSelectorFromString(@"tfn_contentScrollViewDidScroll:animate:");
         if ([self respondsToSelector:event]) {
@@ -3689,6 +3703,7 @@ static UIScrollView* BHTFindScrollableView(UIView* view) {
 - (UIScrollView*)tfn_contentScrollView {
     if (self.profileMediaKind) {
         [self loadViewIfNeeded];
+        [self updateProfileMediaInsets];
         if (self.collectionView) return self.collectionView;
         return BHTCallObject(self.postsController, @"tfn_contentScrollView");
     }
@@ -3698,14 +3713,33 @@ static UIScrollView* BHTFindScrollableView(UIView* view) {
 
 - (void)viewDidLayoutSubviews {
     [super viewDidLayoutSubviews];
-    if (!self.profileMediaKind || !self.collectionView) return;
-    // The profile's resizable header owns these insets. Its native loading,
-    // empty and error surfaces need the same unobscured area as the gallery.
-    UIScrollView* nativeScroll = BHTFindScrollableView(self.postsController.view);
-    if (nativeScroll && !UIEdgeInsetsEqualToEdgeInsets(nativeScroll.contentInset,
-                                                       self.collectionView.contentInset)) {
-        nativeScroll.contentInset = self.collectionView.contentInset;
-    }
+    [self updateProfileMediaInsets];
+}
+
+- (void)viewSafeAreaInsetsDidChange {
+    [super viewSafeAreaInsetsDidChange];
+    [self updateProfileMediaInsets];
+}
+
+- (void)updateProfileMediaInsets {
+    if (!self.profileMediaKind || !self.collectionView || self.updatingProfileMediaInsets) return;
+    UICollectionView* collection = self.collectionView;
+    UIEdgeInsets previous = collection.contentInset;
+    UIEdgeInsets safe = self.view.safeAreaInsets;
+    UIEdgeInsets next = previous;
+    next.top = safe.top;
+    // The native header can add bottom padding to make a short feed scrollable.
+    next.bottom = MAX(previous.bottom, safe.bottom);
+    if (UIEdgeInsetsEqualToEdgeInsets(previous, next)) return;
+    CGPoint offset = collection.contentOffset;
+    offset.y = BHTProfileMediaOffsetForTopInset(offset.y, previous.top, next.top);
+    self.updatingProfileMediaInsets = YES;
+    collection.contentInset = next;
+    collection.contentOffset = offset;
+    self.updatingProfileMediaInsets = NO;
+    // Do not copy gallery insets into the backend: its native controller
+    // already handles the inherited safe area and its own loading controls.
+    BHTIncrementLikesDiagnostic(@"profileMediaSafeAreaUpdates");
 }
 
 - (void)updateProfileMediaVisibility {

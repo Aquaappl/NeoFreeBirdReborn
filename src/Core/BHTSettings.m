@@ -314,6 +314,10 @@ static NSDictionary<NSString*, NSDictionary*>* BHTSettingsPages(void) {
                       @"default": @YES,
                       @"type": @"toggle",
                       @"sectionKey": @"SETTINGS_SECTION_PROFILE_TABS"},
+                    @{@"key": @"profile_media_default_photos",
+                      @"default": @YES,
+                      @"type": @"toggle",
+                      @"sectionKey": @"SETTINGS_SECTION_PROFILE_TABS"},
                     @{
                         @"titleKey":
                             @"COMPATIBILITY_SIGN_IN_TITLE",
