@@ -46,8 +46,8 @@ static NSArray* BHTProfileMainEntriesWithPhotosFirst(NSArray* groups,
     }
     SEL photos = NSSelectorFromString(@"photoEntry");
     SEL videos = NSSelectorFromString(@"videoEntry");
-    if (!photosFirst.boolValue || ![self respondsToSelector:photos] ||
-        ![self respondsToSelector:videos]) return groups;
+    if (!photosFirst.boolValue || ![(id)self respondsToSelector:photos] ||
+        ![(id)self respondsToSelector:videos]) return groups;
     id photoEntry = ((id (*)(id, SEL))objc_msgSend)(self, photos);
     id videoEntry = ((id (*)(id, SEL))objc_msgSend)(self, videos);
     return BHTProfileMainEntriesWithPhotosFirst(groups, photoEntry, videoEntry);
