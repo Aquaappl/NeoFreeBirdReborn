@@ -21,6 +21,7 @@ def main():
 #import <objc/message.h>
 #import <objc/runtime.h>
 #include <string.h>
+#include <math.h>
 #import "Timeline/BHTForYouKeywordFilter.h"
 #import "Likes/BHTLikesNavigationUtility.h"
 #import "Compatibility/BHTCompatibilityReporter.h"
@@ -59,6 +60,10 @@ static BOOL AccountIsGenuinelyPremium(void) { return NO; }
     unit += section(profile_source, "static NSArray* BHTProfileMainEntriesWithPhotosFirst", "// Keep the profile's native")
     unit += section(switches, "static NSNumber* FeatureSwitchOverrideValueForKey", "// Every feature switch facade")
     unit += (ROOT / "tests/ProfileMediaTests.m").read_text(encoding="utf8")
+    login_source = (ROOT / "src/Login/BHTCompatibilityLogin.m").read_text(encoding="utf8")
+    unit += section(login_source, "static NSInteger BHTCompatibilityAPIErrorCode(", "static void BHTCompatibilityRecordCommandCompletion(")
+    unit += section(login_source, "static NSString* BHTCompatibilityFailureCategory(", "static NSString* BHTNormalizedCompatibilityIdentifier(")
+    unit += (ROOT / "tests/CompatibilityLoginTests.m").read_text(encoding="utf8")
     unit += (ROOT / "tests/TimelineKeywordTests.m").read_text(encoding="utf8")
     if args.emit_only:
         args.emit_only.write_text(unit, encoding="utf8")

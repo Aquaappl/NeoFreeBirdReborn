@@ -92,7 +92,7 @@
 /* Compatibility sign-in */
 "COMPATIBILITY_SIGN_IN_TITLE" = "Compatibility Sign-in";
 "COMPATIBILITY_SIGN_IN_HEADING" = "Compatibility Sign-in";
-"COMPATIBILITY_SIGN_IN_DETAIL" = "Uses X 12.9's guarded legacy account service when the normal sign-in screen does not finish.";
+"COMPATIBILITY_SIGN_IN_DETAIL" = "Tries an alternative sign-in with X 12.24.1's account service. Complete any verification X requests. If it fails, Share Report helps identify the cause.";
 "COMPATIBILITY_SIGN_IN_USERNAME_PLACEHOLDER" = "Username, email, or phone";
 "COMPATIBILITY_SIGN_IN_PASSWORD_PLACEHOLDER" = "Password";
 "COMPATIBILITY_SIGN_IN_ACTION" = "Sign in";
@@ -100,9 +100,12 @@
 "COMPATIBILITY_SIGN_IN_PREPARING" = "Preparing X's sign-in request…";
 "COMPATIBILITY_SIGN_IN_CONTACTING_X" = "Contacting X…";
 "COMPATIBILITY_SIGN_IN_REQUIRED_ERROR" = "Enter both your account identifier and password.";
-"COMPATIBILITY_SIGN_IN_VERSION_ERROR" = "Compatibility Sign-in is available only for X 12.9. Your normal X sign-in has not been changed.";
+"COMPATIBILITY_SIGN_IN_VERSION_ERROR" = "This version of Compatibility Sign-in supports X 12.24.1. Install the matching NeoFreeBird build to continue.";
 "COMPATIBILITY_SIGN_IN_RUNTIME_ERROR" = "The guarded compatibility account service is unavailable in this X build. Export a pre-login compatibility report so its selector checks can be reviewed.";
-"COMPATIBILITY_SIGN_IN_REJECTED_ERROR" = "X did not accept this sign-in. Check your details or use X's normal sign-in.";
+"COMPATIBILITY_SIGN_IN_REJECTED_ERROR" = "X did not accept this sign-in. If your details work on x.com, use Share Report so we can check why the app was rejected.";
+"COMPATIBILITY_SIGN_IN_REQUEST_ERROR" = "X could not complete this compatibility request. This does not confirm an incorrect password. Use Share Report to help diagnose the failure.";
+"COMPATIBILITY_SIGN_IN_RATE_LIMIT_ERROR" = "X has limited sign-in attempts. Wait before trying again.";
+"COMPATIBILITY_SIGN_IN_SERVICE_ERROR" = "X's sign-in service is temporarily unavailable. Please try again later.";
 "COMPATIBILITY_SIGN_IN_NETWORK_ERROR" = "X could not be reached. Check your connection and try again.";
 "COMPATIBILITY_SIGN_IN_GENERIC_ERROR" = "The compatibility sign-in could not finish safely. Try X's normal sign-in or export a compatibility report.";
 "COMPATIBILITY_SIGN_IN_OK" = "OK";

@@ -14,6 +14,11 @@ builds require a decrypted X 12.24.1 IPA that you are legally authorized to use.
 
 ## Compatibility
 
+Beta 55 updates Compatibility Sign-in to send validated verification data
+from X instead of discarding it. Reports distinguish the HTTP status from
+X's numeric error reason; request failures, rate limits and service failures
+now have separate messages. Successful login on a device remains unverified.
+
 Beta 54 corrects the profile waterfall's alignment below the header, adds
 **Profiles > Default to Photos**, and removes the blank sidebar editor tile.
 The profile keeps its native header, Follow action, loading and access states.

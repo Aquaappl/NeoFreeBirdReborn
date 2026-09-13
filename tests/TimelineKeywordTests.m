@@ -47,6 +47,7 @@ static BOOL hidden(id item) {
 int main(void) {
     @autoreleasepool {
         testProfileMediaAndGrok();
+        testCompatibilityLogin();
         [BHTForYouKeywordFilter setKeywords:@[@"grok"] forKind:BHTForYouKeywordFilterKindUsername error:nil];
         [BHTForYouKeywordFilter setKeywords:@[] forKind:BHTForYouKeywordFilterKindPostText error:nil];
         TFNTwitterStatus* status = [TFNTwitterStatus new];

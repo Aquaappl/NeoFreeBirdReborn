@@ -183,6 +183,46 @@ these addresses are audit evidence, not additional hard-coded calls.
 
 ## Validation and package
 
+### Compatibility Sign-in, beta 55
+
+The beta 54 device report records three unsuccessful password commands with
+no model payload. The last error is HTTP 404 in
+`com.twitter.TFSTwitterAPICommand.error`; earlier statuses were not retained.
+There was no account registration or challenge handoff. These facts do not
+establish an incorrect password or prove that the route has been removed.
+
+The supplied 12.24.1 binary still builds `xauth_password.json` with URL-base
+type 17 (`https://api.twitter.com/auth/1/`). An empty, unauthenticated request
+to that exact route on September 13, 2026 returned HTTP 403 and API reason 239
+(bad guest token). This verifies a responding route, not credentialed login.
+The app's guest manager already acquires and refreshes guest authentication.
+`T1OnboardingAuthTokenStorage` delegates to the native shared token store;
+allocating this wrapper does not discard the native timeline token.
+
+Beta 55 changes the request candidate by supplying the fresh JSON verification
+result from X's existing ephemeral `js_inst` collector. Beta 54 always discarded
+this value to reproduce an older X 12.9 workaround. Empty, malformed, non-object
+or oversized results remain nil, and the 12-second minimum preflight is retained
+to isolate the request change. This is an experiment requiring device validation;
+metrics changes did not resolve all earlier X 12.9 failures either. Neither
+native onboarding nor a browser session establishes working native account
+credentials on its own.
+
+Error handling now distinguishes 404/410 request failures, 429 rate limits,
+5xx service failures and network errors. The native command's
+`APICommandErrorFromAPIResponse:` stores the API reason separately under
+`TFSTwitterAPICommandError.apiErrorCode`; reports include only that bounded
+integer (-1 means unavailable) and whether the last command used valid metrics.
+Raw error dictionaries, messages, credentials, metrics and account data are
+not exported. Duplicate command callbacks cannot register an account twice,
+and starting a new attempt clears the previous failure category.
+
+Native regression coverage uses the production metrics validator, numeric API
+reason reader and error classifier with synthetic input. Device acceptance is
+still required: attempt Compatibility Sign-in once, complete any challenge,
+verify the account opens and survives relaunch, or share the resulting report
+if rejected. No working-login claim is made by this patch.
+
 The corrected local hook audit and source checks passed. Executable regression
 checks cover sidebar republication/Grok Bot, eager/lazy Home ownership,
 canonical leading mentions, mention entities, changing cached text, quoted

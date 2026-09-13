@@ -410,7 +410,7 @@ def main() -> None:
             "BHTInstallCompatibilitySignInEntry",
             "BHTInstallCompatibilityAddAccountSignInEntry",
             "BHTCompatibilitySignInDiagnosticSnapshot",
-            "guarded X 12.9 compatibility password flow",
+            "guarded X 12.24.1 compatibility password flow",
             "Successful accounts are registered and switched through X's account APIs",
         ),
         "compatibility sign-in public contract",
@@ -1045,7 +1045,8 @@ def main() -> None:
             "BHTCompatibilityMetricsURLIsAllowed(URL)",
             "componentsWithURL:URL resolvingAgainstBaseURL:NO",
             'if (![item.name isEqualToString:@"result"]) continue;',
-            "metrics.length == 0 || metrics.length > 65536",
+            "BHTCompatibilityValidatedMetrics(item.value)",
+            "if (!metrics)",
             "BHTCompatibilityLoginEventMetricsResolvedFromNavigation",
             "[self finishWithMetrics:metrics];",
         ),
@@ -1305,18 +1306,18 @@ def main() -> None:
             "self.metricsCollector.hostView = self.view;",
             "NSProcessInfo.processInfo.systemUptime;",
             "NSProcessInfo.processInfo.systemUptime -",
-            "startWithCompletion:^(__unused NSString* metrics)",
+            "startWithCompletion:^(NSString* metrics)",
+            "BHTCompatibilityValidatedMetrics(metrics)",
             "BHTCompatibilityMinimumPreflightDuration - elapsed",
             "BHTCompatibilityLoginEventMinimumPreflightElapsed",
             "dispatch_after(",
-            "metrics:nil",
+            "metrics:validatedMetrics",
         ),
-        "beta 29 request timing and compatibility metrics isolation",
+        "beta 55 request timing and validated verification data",
     )
-    if "metrics:metrics" in sign_in_action:
+    if "metrics:nil" in sign_in_action or "metrics:metrics" in sign_in_action:
         raise AssertionError(
-            "Navigation-derived metrics must remain isolated from the "
-            "compatibility password command"
+            "Use validated metrics without discarding or forwarding unchecked data"
         )
 
     password_response = source_section(
@@ -1389,21 +1390,23 @@ def main() -> None:
             '@"credentialEntryOwner": @"compatibility_screen_ephemeral"',
             '@"credentialPersistence": @"x_native_account_storage"',
             '@"xAuthClientMetadataPolicy":',
-            '@"native_x_12_9"',
+            '@"native_x_12_24_1"',
             '@"xAuthClientMetadataTargetVersion":',
             '@"xAuthClientMetadataOverrideInstalled": @NO',
             '@"xAuthClientMetadataOverrideClaimed": @0',
             '@"xAuthClientMetadataOverrideApplied": @0',
             '@"xAuthClientMetadataScopeTimedOut": @0',
             '@"compatibilityRequestProfile":',
-            '@"beta29_native_12_9_preflight"',
+            '@"beta55_native_12_24_1_validated_metrics"',
             '@"preflightPolicy":',
-            '@"minimum_12_second_then_nil_metrics"',
+            '@"minimum_12_second_then_validated_metrics"',
             '@"preflightMinimumDelaySeconds":',
             '@"attestationOverridesIncluded": @NO',
             '@"credentialBackupIncluded": @NO',
-            '@"uiMetricsPolicy": @"compatibility_nil"',
-            '@"capturedMetricsUsedForAuthentication": @NO',
+            '@"uiMetricsPolicy": @"validated_json_else_nil"',
+            '@"capturedMetricsUsedForAuthentication": @YES',
+            '@"lastCommandUsedMetrics"',
+            '@"lastCommandAPIErrorCode"',
             '@"addAccountEntryAvailable":',
             '@"nativeAddAccountCompletionSelectorAvailable":',
             '@"addAccountEntryInstalled"',
@@ -4104,11 +4107,11 @@ def main() -> None:
             "navigation delegate"
         )
 
-    if "Version: 6.1.0-beta.54" not in (
+    if "Version: 6.1.0-beta.55" not in (
         ROOT / "control"
     ).read_text(encoding="utf-8"):
         raise AssertionError(
-            "Profile gallery alignment and Photos default must ship as beta.54"
+            "Compatibility verification changes must ship as beta.55"
         )
 
     branding_source = (
