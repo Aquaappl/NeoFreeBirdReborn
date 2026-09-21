@@ -401,6 +401,18 @@ def main() -> None:
     compatibility_login_hook = (
         ROOT / "src" / "Hooks" / "CompatibilityLogin.x"
     ).read_text(encoding="utf-8")
+    secure_web_session_header = (
+        ROOT / "src" / "Login" / "BHTSecureWebSession.h"
+    ).read_text(encoding="utf-8")
+    secure_web_session_source = (
+        ROOT / "src" / "Login" / "BHTSecureWebSession.m"
+    ).read_text(encoding="utf-8")
+    web_session_security_source = (
+        ROOT / "src" / "Login" / "BHTWebSessionSecurity.m"
+    ).read_text(encoding="utf-8")
+    web_session_hook = (
+        ROOT / "src" / "Hooks" / "WebSessionAuthentication.x"
+    ).read_text(encoding="utf-8")
     require_source_tokens(
         compatibility_login_header,
         (
@@ -410,8 +422,10 @@ def main() -> None:
             "BHTInstallCompatibilitySignInEntry",
             "BHTInstallCompatibilityAddAccountSignInEntry",
             "BHTCompatibilitySignInDiagnosticSnapshot",
-            "guarded X 12.24.1 compatibility password flow",
+            "user-confirmed X 12.24.1 web-session bridge",
             "Successful accounts are registered and switched through X's account APIs",
+            "BHTCompatibilityInstallWebSessionAccount",
+            "BHTCompatibilityRemoveWebSessionAccount",
         ),
         "compatibility sign-in public contract",
     )
@@ -438,7 +452,7 @@ def main() -> None:
             "BHTLoadCompatibilityFrameworkIfNeeded();",
             "return "
             "BHTMissingCompatibilityRequirements().count == 0;",
-            "return BHTCompatibilityRuntimeIsAvailable();",
+            "return BHTSecureWebSessionSignInIsAvailable();",
         ),
         "hard X 12.9 compatibility gate",
     )
@@ -895,7 +909,7 @@ def main() -> None:
             'signature, 3, "@?"',
             "signature, 2, @encode(BOOL)",
             'signature, 3, "@"',
-            '@"legacyPasswordCommandReachable": @YES',
+            '@"legacyPasswordCommandReachable": @NO',
             "BHTSharePreLoginCompatibilityReport(",
             '@"NeoFreeBird.ShareLoginReport"',
             "shareCompatibilityReport:",
@@ -908,10 +922,10 @@ def main() -> None:
         "@interface BHTCompatibilityEntryTarget",
         "public compatibility login routes",
     )
-    if "BHTPresentCompatibilitySignInForContext(" not in public_login_routes:
+    if "BHTPresentSecureWebSessionSignIn(" not in public_login_routes:
         raise AssertionError(
-            "Public compatibility actions must dispatch the dedicated "
-            "compatibility controller"
+            "Public compatibility actions must dispatch the secure X web "
+            "session controller"
         )
     if (
         "BHTPresentNativeInitialCompatibilitySignIn(" in public_login_routes
@@ -1385,10 +1399,12 @@ def main() -> None:
             '@"missingRuntimeRequirements":',
             '@"preLoginDiagnosticsEligible":',
             '@"nativeSignInRemainsDefault": @YES',
-            '@"compatibilitySignInMode": @"dedicated_xauth_password"',
-            '@"legacyPasswordCommandReachable": @YES',
-            '@"credentialEntryOwner": @"compatibility_screen_ephemeral"',
-            '@"credentialPersistence": @"x_native_account_storage"',
+            '@"secureWebSession":',
+            "BHTSecureWebSessionDiagnosticSnapshot()",
+            '@"user_confirmed_web_session_bridge"',
+            '@"legacyPasswordCommandReachable": @NO',
+            '@"credentialEntryOwner": @"x_webview"',
+            '@"device_only_keychain_and_webkit_store"',
             '@"xAuthClientMetadataPolicy":',
             '@"native_x_12_24_1"',
             '@"xAuthClientMetadataTargetVersion":',
@@ -1397,14 +1413,14 @@ def main() -> None:
             '@"xAuthClientMetadataOverrideApplied": @0',
             '@"xAuthClientMetadataScopeTimedOut": @0',
             '@"compatibilityRequestProfile":',
-            '@"beta55_native_12_24_1_validated_metrics"',
+            '@"secure_web_session_v1"',
             '@"preflightPolicy":',
-            '@"minimum_12_second_then_validated_metrics"',
+            '@"user_confirmed_x_web_sign_in"',
             '@"preflightMinimumDelaySeconds":',
             '@"attestationOverridesIncluded": @NO',
             '@"credentialBackupIncluded": @NO',
             '@"uiMetricsPolicy": @"validated_json_else_nil"',
-            '@"capturedMetricsUsedForAuthentication": @YES',
+            '@"capturedMetricsUsedForAuthentication": @NO',
             '@"lastCommandUsedMetrics"',
             '@"lastCommandAPIErrorCode"',
             '@"addAccountEntryAvailable":',
@@ -1421,8 +1437,9 @@ def main() -> None:
             '@"lastCommandFailureClass"',
             '@"lastCommandFailureDomain"',
             '@"lastCommandFailureCode"',
-            '@"capturesCredentials": @NO',
-            '@"capturesIdentifiers": @NO',
+            '@"capturesPassword": @NO',
+            '@"capturesSessionCredentialAfterConfirmation": @YES',
+            '@"capturesIdentifiers": @YES',
             '@"capturesPayloadContents": @NO',
             '@"capturesFailureDescriptions": @NO',
             '@"capturesFailureUserInfo": @NO',
@@ -1468,12 +1485,163 @@ def main() -> None:
             '@"unsafeLoginOverridesIncluded": @NO',
             '@"webSessionHarvestingIncluded": @NO',
             '@"compatibilityPasswordSignInIncluded": @YES',
+            '@"compatibilityPasswordSignInReachable": @NO',
+            '@"secureUserConfirmedWebSessionBridgeIncluded": @YES',
+            '@"sessionSecretsStoredInDeviceOnlyKeychain": @YES',
             '@"nativeOnboardingSignInIncluded": @NO',
             '@"compatibilityXAuthClientMetadataIncluded": @NO',
             '@"attestationOverridesIncluded": @NO',
             '@"credentialBackupIncluded": @NO',
         ),
         "redacted compatibility sign-in report integration",
+    )
+
+    require_source_tokens(
+        secure_web_session_header,
+        (
+            "BHTPresentSecureWebSessionSignIn",
+            "BHTSecureWebSessionAuthenticatedRequest",
+            "BHTSecureWebSessionOwnsNativeAccount",
+            "BHTRevokeSecureWebSession",
+            "BHTSecureWebSessionDiagnosticSnapshot",
+            "read only after the user taps",
+        ),
+        "secure web-session public contract",
+    )
+    require_source_tokens(
+        secure_web_session_source,
+        (
+            "kSecClassGenericPassword",
+            "kSecAttrAccessibleWhenUnlockedThisDeviceOnly",
+            "SecItemCopyMatching",
+            "SecItemUpdate",
+            "SecItemAdd",
+            "SecItemDelete",
+            "WKWebsiteDataStore.defaultDataStore",
+            "BHTWebSessionEventConfirmationTapped",
+            "getAllCookies:",
+            'document.querySelector(\'a[data-testid=\\"AppTabBar_Profile_Link\\"]\')',
+            "BHTCompatibilityInstallWebSessionAccount(",
+            "BHTCompatibilityRemoveWebSessionAccount(screenName)",
+            '@"passwordReadByTweak": @NO',
+            '@"cookieReadRequiresUserConfirmation": @YES',
+            '@"sessionStoredInDeviceOnlyKeychain": @YES',
+            '@"sessionStoredInUserDefaults": @NO',
+            '@"sessionStoredInPlaintextFile": @NO',
+            '@"credentialLoggingIncluded": @NO',
+            '@"hiddenGestureEntryIncluded": @NO',
+            '@"nativeAccountUsesSessionSecrets": @NO',
+        ),
+        "user-confirmed Keychain web-session bridge",
+    )
+    for unsafe_persistence_api in (
+        "NSUserDefaults",
+        "writeToFile:",
+        "writeToURL:",
+        "NSLog",
+        "os_log",
+        "localizedDescription",
+        "debugDescription",
+    ):
+        if unsafe_persistence_api in secure_web_session_source:
+            raise AssertionError(
+                "Secure web sign-in must not persist outside Keychain or "
+                f"log credential-adjacent data: {unsafe_persistence_api}"
+            )
+    for unsafe_page_read in (
+        "document.cookie",
+        "document.body",
+        "innerHTML",
+        "localStorage",
+        "sessionStorage",
+    ):
+        if unsafe_page_read in secure_web_session_source:
+            raise AssertionError(
+                "Secure web sign-in may query only X's profile link: "
+                f"{unsafe_page_read}"
+            )
+    if re.search(r"(?<!UI)textContent\b", secure_web_session_source):
+        raise AssertionError(
+            "Secure web sign-in may not read page textContent"
+        )
+    confirmation_action = source_section(
+        secure_web_session_source,
+        "- (void)useAccountTapped {",
+        "- (void)webView:(WKWebView*)webView\n"
+        "    didStartProvisionalNavigation:",
+        "explicit web-session confirmation",
+    )
+    if confirmation_action.index(
+        "BHTWebSessionEventConfirmationTapped"
+    ) > confirmation_action.index("getAllCookies:"):
+        raise AssertionError(
+            "The explicit confirmation event must precede cookie access"
+        )
+    request_bridge = source_section(
+        secure_web_session_source,
+        "NSURLRequest* BHTSecureWebSessionAuthenticatedRequest(",
+        "BOOL BHTSecureWebSessionOwnsNativeAccount(",
+        "first-party request bridge",
+    )
+    if request_bridge.index(
+        "BHTWebSessionURLIsAllowed(request.URL)"
+    ) > request_bridge.index("BHTWebSessionCopySession()"):
+        raise AssertionError(
+            "Reject non-first-party URLs before loading the Keychain session"
+        )
+    require_source_tokens(
+        web_session_security_source,
+        (
+            'isEqualToString:@"https"',
+            'BHTWebSessionHostMatchesDomain(host, @"x.com")',
+            'BHTWebSessionHostMatchesDomain(host, @"twitter.com")',
+            'hasSuffix:[@"." stringByAppendingString:domain]',
+            "components.user.length > 0",
+            "components.password.length > 0",
+            "port.unsignedIntegerValue != 443",
+            '@"auth_token", @"ct0", @"twid"',
+        ),
+        "strict web-session request and cookie validation",
+    )
+    if "containsString" in web_session_security_source:
+        raise AssertionError(
+            "Web-session domains must use parsed exact/suffix matching"
+        )
+    require_source_tokens(
+        web_session_hook,
+        (
+            "%hook NSURLSession",
+            "BHTSecureWebSessionAuthenticatedRequest(request)",
+            "BHTWebSessionTaskMethodHasObjectShape(",
+            '@"12.24.1"',
+        ),
+        "guarded final-boundary request hooks",
+    )
+    if web_session_hook.count("%hook NSURLSession") != 8:
+        raise AssertionError(
+            "The web session must cover exactly the eight audited request "
+            "constructors"
+        )
+    for broad_hook in (
+        "%hook NSMutableURLRequest",
+        "- (void)setValue:forHTTPHeaderField:",
+        "- (void)setURL:",
+        "%hook NSURLSessionTask",
+    ):
+        if broad_hook in web_session_hook:
+            raise AssertionError(
+                "The web session must not install a broad mutable-request "
+                f"or task hook: {broad_hook}"
+            )
+    require_source_tokens(
+        compatibility_login_source,
+        (
+            '@"neofreebird_web_session"',
+            "BHTCompatibilityInstallWebSessionAccount(",
+            "BHTCompatibilityRemoveWebSessionAccount(",
+            "BHTPresentSecureWebSessionSignIn(presenter, nil);",
+        ),
+        "non-secret native web-session account shell",
     )
 
     reply_header_source = (
@@ -4107,11 +4275,11 @@ def main() -> None:
             "navigation delegate"
         )
 
-    if "Version: 6.1.0-beta.55" not in (
+    if "Version: 6.1.0-beta.56" not in (
         ROOT / "control"
     ).read_text(encoding="utf-8"):
         raise AssertionError(
-            "Compatibility verification changes must ship as beta.55"
+            "Secure web sign-in changes must ship as beta.56"
         )
 
     branding_source = (

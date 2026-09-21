@@ -4,6 +4,7 @@
 //
 
 #import "HookHelpers.h"
+#import "Login/BHTSecureWebSession.h"
 #import "Sidebar/BHTSidebarNavigationUtility.h"
 
 #import <objc/runtime.h>
@@ -680,6 +681,14 @@ static long long BHTVideoVariantScore(id variant) {
 // MARK: - Account feature gates
 
 %hook TFNTwitterAccount
+
+- (NSInteger)loginState {
+    return BHTSecureWebSessionOwnsNativeAccount(self) ? 1 : %orig;
+}
+
+- (BOOL)isAuthorized {
+    return BHTSecureWebSessionOwnsNativeAccount(self) ? YES : %orig;
+}
 
 - (BOOL)isSensitiveTweetWarningsComposeEnabled {
     return [BHTSettings boolForKey:@"disable_sensitive_tweet_warnings"]

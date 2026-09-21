@@ -48,6 +48,7 @@ int main(void) {
     @autoreleasepool {
         testProfileMediaAndGrok();
         testCompatibilityLogin();
+        testWebSessionSecurity();
         [BHTForYouKeywordFilter setKeywords:@[@"grok"] forKind:BHTForYouKeywordFilterKindUsername error:nil];
         [BHTForYouKeywordFilter setKeywords:@[] forKind:BHTForYouKeywordFilterKindPostText error:nil];
         TFNTwitterStatus* status = [TFNTwitterStatus new];

@@ -25,6 +25,7 @@ def main():
 #import "Timeline/BHTForYouKeywordFilter.h"
 #import "Likes/BHTLikesNavigationUtility.h"
 #import "Compatibility/BHTCompatibilityReporter.h"
+#import "Login/BHTWebSessionSecurity.h"
 NSString* const BHTSettingsProfileDidApplyNotification = @"TestProfileChanged";
 NSString* const TabPageKey = @"page";
 NSString* const TabTitleKey = @"title";
@@ -64,6 +65,7 @@ static BOOL AccountIsGenuinelyPremium(void) { return NO; }
     unit += section(login_source, "static NSInteger BHTCompatibilityAPIErrorCode(", "static void BHTCompatibilityRecordCommandCompletion(")
     unit += section(login_source, "static NSString* BHTCompatibilityFailureCategory(", "static NSString* BHTNormalizedCompatibilityIdentifier(")
     unit += (ROOT / "tests/CompatibilityLoginTests.m").read_text(encoding="utf8")
+    unit += (ROOT / "tests/WebSessionSecurityTests.m").read_text(encoding="utf8")
     unit += (ROOT / "tests/TimelineKeywordTests.m").read_text(encoding="utf8")
     if args.emit_only:
         args.emit_only.write_text(unit, encoding="utf8")
@@ -77,6 +79,7 @@ static BOOL AccountIsGenuinelyPremium(void) { return NO; }
                         "-framework", "Foundation", "-I", str(ROOT / "src"), str(test_source),
                         str(ROOT / "src/Timeline/BHTForYouKeywordFilter.m"),
                         str(ROOT / "src/Likes/BHTLikesNavigationUtility.m"),
+                        str(ROOT / "src/Login/BHTWebSessionSecurity.m"),
                         str(ROOT / "src/Core/BHTBundle.m"), "-o", str(binary)], check=True)
         subprocess.run([str(binary)], check=True)
 
