@@ -22,8 +22,22 @@
 @property(nonatomic, strong) TFNTwitterStatus* retweetedStatus;
 @property(nonatomic, strong) TFNTwitterStatus* quotedStatus;
 @property(nonatomic, copy) NSArray* entitiesRemovingUnmentioned;
+@property(nonatomic, strong) id tweetContext;
+@property(nonatomic, strong) id banner;
 @end
 @implementation TFNTwitterStatus
+@end
+
+@interface TFNTwitterTweetTopicFeedbackContext : NSObject
+@end
+@implementation TFNTwitterTweetTopicFeedbackContext
+@end
+
+@interface TFNTwitterTweetContext : NSObject
+@property(nonatomic, strong) TFNTwitterTweetTopicFeedbackContext*
+    topicFeedbackContext;
+@end
+@implementation TFNTwitterTweetContext
 @end
 
 @interface T1URTTimelineStatusItemViewModel : NSObject
@@ -49,6 +63,7 @@ int main(void) {
         testProfileMediaAndGrok();
         testCompatibilityLogin();
         testWebSessionSecurity();
+        testTimelineCleanupClassification();
         [BHTForYouKeywordFilter setKeywords:@[@"grok"] forKind:BHTForYouKeywordFilterKindUsername error:nil];
         [BHTForYouKeywordFilter setKeywords:@[] forKind:BHTForYouKeywordFilterKindPostText error:nil];
         TFNTwitterStatus* status = [TFNTwitterStatus new];
@@ -57,6 +72,15 @@ int main(void) {
         status.fromUserName = @"reader";
         T1URTTimelineStatusItemViewModel* item = [T1URTTimelineStatusItemViewModel new];
         item.tweet = status;
+        TFNTwitterTweetContext* topicContext =
+            [TFNTwitterTweetContext new];
+        topicContext.topicFeedbackContext =
+            [TFNTwitterTweetTopicFeedbackContext new];
+        status.tweetContext = topicContext;
+        NSCAssert((BHTTimelineCleanupKindsForItem(item) &
+                       BHTTimelineCleanupKindTopicPost) != 0,
+                  @"X 12.24.1 topic feedback metadata identifies Topic posts");
+        status.tweetContext = nil;
         NSCAssert(!hidden(item), @"Ordinary posts remain visible");
         status.canonicalStatus = [TFNTwitterCanonicalStatus new];
         status.canonicalStatus.originalText = @"@Grok Explain this please";

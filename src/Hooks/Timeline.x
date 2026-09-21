@@ -6,6 +6,7 @@
 #import "HookHelpers.h"
 #import "Compatibility/BHTCompatibilityReporter.h"
 #import "Timeline/BHTForYouKeywordFilter.h"
+#import "Timeline/BHTTimelineCleanup.h"
 #import <stddef.h>
 #import <stdint.h>
 #import <string.h>
@@ -20,6 +21,7 @@
 static char kBHTForYouTimelineRoleKey;
 static char kBHTForYouKeywordDecisionKey;
 static char kBHTForYouControllerGenerationKey;
+static char kBHTTimelineCleanupStateKey;
 
 typedef NS_ENUM(NSInteger, BHTHomeTimelineRole) {
     BHTHomeTimelineRoleNonForYou = 0,
@@ -407,54 +409,7 @@ static void SyncHomeAddTabButton(id container, BOOL hidden) {
 
 %end
 
-// MARK: - Hide "Discover more", who-to-follow and prompts
-
-// Resolves the class by name so mangled Swift names work; NSStringFromClass
-// would only ever produce the demangled dotted form.
-static BOOL IsInHierarchyOfClass(UIViewController* viewController, NSString* className) {
-    Class targetClass = NSClassFromString(className);
-    if (!targetClass) {
-        return NO;
-    }
-
-    UIViewController* currentVC = viewController;
-
-    while (currentVC) {
-        if ([currentVC isKindOfClass:targetClass]) {
-            return YES;
-        }
-
-        if (currentVC.parentViewController) {
-            currentVC = currentVC.parentViewController;
-        } else if (currentVC.navigationController) {
-            currentVC = currentVC.navigationController;
-        } else if (currentVC.presentingViewController) {
-            currentVC = currentVC.presentingViewController;
-        } else {
-            break;
-        }
-    }
-
-    return NO;
-}
-
-static NSString* ItemEntryID(id viewModel) {
-    if (![viewModel respondsToSelector:@selector(entryID)]) {
-        return nil;
-    }
-
-    NSString* entryID = [viewModel performSelector:@selector(entryID)];
-    return [entryID isKindOfClass:[NSString class]] ? entryID : nil;
-}
-
-static NSString* ItemScribeComponent(id viewModel) {
-    if (![viewModel respondsToSelector:@selector(scribeComponent)]) {
-        return nil;
-    }
-
-    NSString* component = [viewModel performSelector:@selector(scribeComponent)];
-    return [component isKindOfClass:[NSString class]] ? component : nil;
-}
+// MARK: - Timeline cleanup
 
 static const char* SkipObjCTypeQualifiers(const char* type) {
     if (!type) return NULL;
@@ -1144,73 +1099,15 @@ static BOOL BHTShouldHideForYouKeywordItemInURTController(
         item, generation, hasUsernameFilters, hasPostTextFilters);
 }
 
-static BOOL ItemHasTopicBanner(id viewModel) {
-    id banner = ItemObjectValue(viewModel, NSSelectorFromString(@"banner"), "banner");
-    NSString* bannerClass = banner ? NSStringFromClass([banner classForCoder]) : nil;
-    return [bannerClass isEqualToString:@"TFNTwitterURTTimelineStatusTopicBanner"] ||
-           [bannerClass hasSuffix:@".URTTimelineStatusTopicBanner"];
-}
-
-static BOOL StringContainsTopic(NSString* value) {
-    return [value isKindOfClass:[NSString class]] &&
-           [[value lowercaseString] containsString:@"topic"];
-}
-
-static BOOL StringIsTopicSuggestion(NSString* value) {
-    if (!StringContainsTopic(value)) {
-        return NO;
-    }
-    NSString* lower = [value lowercaseString];
-    return [lower containsString:@"follow"] || [lower containsString:@"suggest"];
-}
-
-static BOOL ShouldHideTimelineItem(id item, BOOL hideWhoToFollow, BOOL hidePrompts,
-                                   BOOL hideDiscoverMore, BOOL hideTopics,
-                                   BOOL hideTopicsToFollow, BOOL inConversation,
-                                   BOOL inProfile,
+static BOOL ShouldHideTimelineItem(id item,
+                                   BHTTimelineCleanupKind cleanupKinds,
                                    BOOL filterForYouKeywords,
                                    NSUInteger keywordFilterGeneration,
                                    BOOL hasUsernameFilters,
                                    BOOL hasPostTextFilters) {
     id viewModel = unwrapDataViewItem(item);
-    NSString* className = NSStringFromClass([viewModel classForCoder]);
-    NSString* component = ItemScribeComponent(viewModel);
-    NSString* entryID = ItemEntryID(viewModel);
-
-    if (hidePrompts && [className isEqualToString:@"TwitterURT.URTTimelinePromptViewModel"]) {
-        return YES;
-    }
-
-    if (hideWhoToFollow && [component isEqualToString:@"suggest_who_to_follow"]) {
-        return YES;
-    }
-
-    if (hideTopics && ItemHasTopicBanner(viewModel)) {
-        return YES;
-    }
-
-    BOOL isTopicCollection =
-        [className isEqualToString:@"T1TwitterSwift.URTTimelineTopicCollectionViewModel"] ||
-        [className isEqualToString:@"TwitterURT.URTTimelineTopicCollectionViewModel"] ||
-        [className hasSuffix:@".URTTimelineTopicCollectionViewModel"];
-    if (hideTopicsToFollow && inProfile &&
-        (isTopicCollection || StringIsTopicSuggestion(component) ||
-         StringIsTopicSuggestion(entryID))) {
-        return YES;
-    }
-
-    if (hideTopics &&
-        [className isEqualToString:@"TwitterURT.URTTimelinePromptViewModel"] &&
-        (StringContainsTopic(component) || StringContainsTopic(entryID))) {
-        return YES;
-    }
-
-    if (hideDiscoverMore && inConversation &&
-        [entryID hasPrefix:@"tweetdetailrelatedtweets"]) {
-        return YES;
-    }
-
-    if (hideWhoToFollow && [entryID containsString:@"who-to-follow"]) {
+    if (BHTShouldHideTimelineCleanupItemForKinds(viewModel,
+                                                 cleanupKinds)) {
         return YES;
     }
 
@@ -1226,14 +1123,8 @@ static BOOL ShouldHideTimelineItem(id item, BOOL hideWhoToFollow, BOOL hidePromp
 
 static NSArray* FilteredTimelineSections(TFNItemsDataViewController* dataViewController,
                                          NSArray* sections) {
-    BOOL hideWhoToFollow = [BHTSettings boolForKey:@"hide_who_to_follow"];
-    BOOL hidePrompts = [BHTSettings boolForKey:@"hide_timeline_prompts"];
-    BOOL hideDiscoverMore = [BHTSettings boolForKey:@"hide_discover_more"];
-    BOOL hideTopics = [BHTSettings boolForKey:@"hide_topics"];
-    BOOL hideTopicsToFollow = [BHTSettings boolForKey:@"hide_topics_to_follow"];
-    BOOL inConversation =
-        IsInHierarchyOfClass(dataViewController, @"T1ConversationContainerViewController");
-    BOOL inProfile = IsInHierarchyOfClass(dataViewController, @"T1ProfileViewController");
+    BHTTimelineCleanupKind cleanupKinds =
+        BHTEnabledTimelineCleanupKinds();
     BOOL hasUsernameFilters = NO;
     BOOL hasPostTextFilters = NO;
     NSUInteger keywordFilterGeneration =
@@ -1244,8 +1135,7 @@ static NSArray* FilteredTimelineSections(TFNItemsDataViewController* dataViewCon
         (hasUsernameFilters || hasPostTextFilters) &&
         IsPrimaryForYouTimelineController(dataViewController);
 
-    if (!hideWhoToFollow && !hidePrompts && !hideTopics &&
-        !hideTopicsToFollow && !(hideDiscoverMore && inConversation) &&
+    if (cleanupKinds == BHTTimelineCleanupKindNone &&
         !filterForYouKeywords) {
         return sections;
     }
@@ -1265,10 +1155,8 @@ static NSArray* FilteredTimelineSections(TFNItemsDataViewController* dataViewCon
         NSMutableIndexSet* removed = [NSMutableIndexSet indexSet];
 
         for (NSUInteger i = 0; i < items.count; i++) {
-            if (ShouldHideTimelineItem(items[i], hideWhoToFollow, hidePrompts,
-                                       hideDiscoverMore, hideTopics,
-                                       hideTopicsToFollow, inConversation,
-                                       inProfile, filterForYouKeywords,
+            if (ShouldHideTimelineItem(items[i], cleanupKinds,
+                                       filterForYouKeywords,
                                        keywordFilterGeneration,
                                        hasUsernameFilters,
                                        hasPostTextFilters)) {
@@ -1300,8 +1188,8 @@ static NSArray* FilteredTimelineSections(TFNItemsDataViewController* dataViewCon
     %orig;
 
     // Returning from NeoFreeBird settings must re-evaluate already-loaded
-    // rows after either filter list changes. This reloads only X's local table
-    // snapshot; it does not issue a timeline/network refresh.
+    // rows after keyword lists or cleanup toggles change. This reloads only
+    // X's local table snapshot; it does not issue a timeline/network refresh.
     NSUInteger generation = [BHTForYouKeywordFilter filterGeneration];
     NSNumber* renderedGeneration =
         objc_getAssociatedObject(
@@ -1309,25 +1197,43 @@ static NSArray* FilteredTimelineSections(TFNItemsDataViewController* dataViewCon
     objc_setAssociatedObject(
         self, &kBHTForYouControllerGenerationKey, @(generation),
         OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-    if (renderedGeneration &&
+    BHTTimelineCleanupKind cleanupKinds =
+        BHTEnabledTimelineCleanupKinds();
+    NSNumber* renderedCleanupState =
+        objc_getAssociatedObject(self, &kBHTTimelineCleanupStateKey);
+    objc_setAssociatedObject(
+        self, &kBHTTimelineCleanupStateKey, @(cleanupKinds),
+        OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    BOOL keywordFiltersChanged =
+        renderedGeneration &&
         renderedGeneration.unsignedIntegerValue != generation &&
-        [(UIViewController*)self isViewLoaded] &&
-        BHTIsPrimaryForYouURTController(self)) {
+        BHTIsPrimaryForYouURTController(self);
+    BOOL cleanupFiltersChanged =
+        renderedCleanupState &&
+        renderedCleanupState.unsignedIntegerValue != cleanupKinds;
+    if ((keywordFiltersChanged || cleanupFiltersChanged) &&
+        [(UIViewController*)self isViewLoaded]) {
         id tableView = ItemObjectValue(
             self, @selector(tableView), "tableView");
         if ([tableView isKindOfClass:UITableView.class]) {
             [(UITableView*)tableView reloadData];
-            BHTRecordForYouFilterDiagnostic(
-                BHTForYouFilterDiagnosticRenderReloaded);
+            if (keywordFiltersChanged) {
+                BHTRecordForYouFilterDiagnostic(
+                    BHTForYouFilterDiagnosticRenderReloaded);
+            }
         }
     }
 }
 
 - (double)tableViewHeightForItem:(id)item
                      atIndexPath:(NSIndexPath*)indexPath {
-    if (BHTShouldHideForYouKeywordItemInURTController(self, item)) {
-        BHTRecordForYouFilterDiagnostic(
-            BHTForYouFilterDiagnosticRenderRowCollapsed);
+    BOOL hideKeywordItem =
+        BHTShouldHideForYouKeywordItemInURTController(self, item);
+    if (BHTShouldHideTimelineCleanupItem(item) || hideKeywordItem) {
+        if (hideKeywordItem) {
+            BHTRecordForYouFilterDiagnostic(
+                BHTForYouFilterDiagnosticRenderRowCollapsed);
+        }
         return 0.0;
     }
     return %orig;
@@ -1335,9 +1241,13 @@ static NSArray* FilteredTimelineSections(TFNItemsDataViewController* dataViewCon
 
 - (double)estimatedTableViewHeightForItem:(id)item
                               atIndexPath:(NSIndexPath*)indexPath {
-    if (BHTShouldHideForYouKeywordItemInURTController(self, item)) {
-        BHTRecordForYouFilterDiagnostic(
-            BHTForYouFilterDiagnosticRenderRowCollapsed);
+    BOOL hideKeywordItem =
+        BHTShouldHideForYouKeywordItemInURTController(self, item);
+    if (BHTShouldHideTimelineCleanupItem(item) || hideKeywordItem) {
+        if (hideKeywordItem) {
+            BHTRecordForYouFilterDiagnostic(
+                BHTForYouFilterDiagnosticRenderRowCollapsed);
+        }
         return 0.0;
     }
     return %orig;

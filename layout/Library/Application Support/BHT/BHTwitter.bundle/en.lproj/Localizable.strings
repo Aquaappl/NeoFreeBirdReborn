@@ -63,19 +63,19 @@
 /*General*/
 
 "HIDE_WHO_TO_FOLLOW_TITLE" = "No 'Who to follow'";
-"HIDE_WHO_TO_FOLLOW_DETAIL" = "Remove follow suggestions.";
+"HIDE_WHO_TO_FOLLOW_DETAIL" = "Remove account suggestion modules, including follow and subscribe suggestions.";
 
 "HIDE_TIMELINE_PROMPTS_TITLE" = "No timeline prompts";
-"HIDE_TIMELINE_PROMPTS_DETAIL" = "Remove banners like 'Add contacts'.";
+"HIDE_TIMELINE_PROMPTS_DETAIL" = "Remove injected prompts such as contacts, relevance, community, and Community Notes suggestions.";
 
 "HIDE_DISCOVER_MORE_TITLE" = "No Discover more";
-"HIDE_DISCOVER_MORE_DETAIL" = "Remove the related-post module at the end of conversations.";
+"HIDE_DISCOVER_MORE_DETAIL" = "Remove Discover more and related-post modules after conversations.";
 
 "HIDE_TOPICS_TITLE" = "No Topic posts";
 "HIDE_TOPICS_DETAIL" = "Remove posts inserted into Home because of a followed or suggested Topic.";
 
 "HIDE_TOPICS_TO_FOLLOW_TITLE" = "No Topics to follow";
-"HIDE_TOPICS_TO_FOLLOW_DETAIL" = "Remove Topic suggestion modules from profiles.";
+"HIDE_TOPICS_TO_FOLLOW_DETAIL" = "Remove Topic suggestion carousels and upsells from timelines and profiles.";
 
 "PADLOCK_TITLE" = "Lock Twitter";
 "PADLOCK_DETAIL" = "Require Face ID or a passcode to open Twitter.";

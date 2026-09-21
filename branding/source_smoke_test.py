@@ -4275,11 +4275,11 @@ def main() -> None:
             "navigation delegate"
         )
 
-    if "Version: 6.1.0-beta.57" not in (
+    if "Version: 6.1.0-beta.58" not in (
         ROOT / "control"
     ).read_text(encoding="utf-8"):
         raise AssertionError(
-            "Secure web sign-in account-state guards must ship as beta.57"
+            "Expanded X 12.24.1 timeline cleanup must ship as beta.58"
         )
 
     branding_source = (
@@ -5483,7 +5483,7 @@ def main() -> None:
     keyword_decision_cache = source_section(
         timeline_source,
         "static BOOL ShouldHideForYouKeywordItem",
-        "static BOOL ItemHasTopicBanner",
+        "static BOOL ShouldHideTimelineItem",
         "For You keyword decision cache",
     )
     require_source_tokens(
@@ -5515,6 +5515,62 @@ def main() -> None:
     if "(hidden ?" in keyword_decision_cache:
         raise AssertionError(
             "For You filtering must not use the stale packed decision cache"
+        )
+
+    timeline_cleanup_source = (
+        ROOT / "src" / "Timeline" / "BHTTimelineCleanup.m"
+    ).read_text(encoding="utf-8")
+    require_source_tokens(
+        timeline_cleanup_source,
+        (
+            '@"suggest_who_to_follow"',
+            '@"who_to_follow"',
+            '@"recommended_users"',
+            '@"user_recommendations"',
+            '@"discover_more"',
+            '@"tweetdetailrelatedtweets"',
+            '@"suggest_topics_module"',
+            '@"utt_topic_carousel"',
+            '@"relevance_prompt_module"',
+            '@"birdwatch_suggestion"',
+            '@"tweetContext"',
+            '@"topicFeedbackContext"',
+            "TFNTwitterTweetTopicFeedbackContext",
+            "list_creation_recommended_users_timeline",
+            "list_edit_recommended_users_timeline",
+        ),
+        "X 12.24.1 timeline cleanup identifiers and Topic metadata",
+    )
+    require_source_tokens(
+        timeline_source,
+        (
+            "BHTEnabledTimelineCleanupKinds()",
+            "BHTShouldHideTimelineCleanupItemForKinds",
+            "BHTShouldHideTimelineCleanupItem(item)",
+            "cleanupFiltersChanged",
+        ),
+        "structural and render-time timeline cleanup",
+    )
+    cleanup_filter_call = source_section(
+        timeline_source,
+        "static BOOL ShouldHideTimelineItem",
+        "static NSArray* FilteredTimelineSections",
+        "timeline cleanup call site",
+    )
+    for obsolete_context_gate in ("inConversation", "inProfile"):
+        if obsolete_context_gate in cleanup_filter_call:
+            raise AssertionError(
+                "Stable module identifiers must not depend on fragile UIKit "
+                f"containment: {obsolete_context_gate}"
+            )
+
+    ads_source = (
+        ROOT / "src" / "Hooks" / "Ads.x"
+    ).read_text(encoding="utf-8")
+    if ads_source.count("BHTShouldHideTimelineCleanupItem") < 2:
+        raise AssertionError(
+            "Opaque timeline rows must apply cleanup during cell creation "
+            "and row sizing"
         )
 
     keyword_filter_call = source_section(

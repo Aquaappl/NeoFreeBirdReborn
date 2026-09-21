@@ -5,6 +5,7 @@
 
 #import "HookHelpers.h"
 #import "Compatibility/BHTCompatibilityReporter.h"
+#import "Timeline/BHTTimelineCleanup.h"
 #include <string.h>
 
 static char kBHTHiddenAdCellKey;
@@ -458,7 +459,9 @@ static id BHTItemAtIndexPath(TFNItemsDataViewController* controller,
     NSString* location = [self respondsToSelector:@selector(adDisplayLocation)]
                              ? self.adDisplayLocation
                              : nil;
-    BOOL hidden = ShouldHideAndRecord(resolved, location);
+    BOOL hidden =
+        ShouldHideAndRecord(resolved, location) ||
+        BHTShouldHideTimelineCleanupItem(resolved);
     NSNumber* hiddenByBHT = objc_getAssociatedObject(cell,
                                                       &kBHTHiddenAdCellKey);
     if (hidden && [cell isKindOfClass:UIView.class]) {
@@ -485,7 +488,10 @@ static id BHTItemAtIndexPath(TFNItemsDataViewController* controller,
     NSString* location = [self respondsToSelector:@selector(adDisplayLocation)]
                              ? self.adDisplayLocation
                              : nil;
-    return ShouldHideAndRecord(item, location) ? 0.0 : %orig;
+    return (ShouldHideAndRecord(item, location) ||
+            BHTShouldHideTimelineCleanupItem(item))
+               ? 0.0
+               : %orig;
 }
 
 %end
