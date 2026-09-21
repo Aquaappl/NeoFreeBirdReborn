@@ -1182,6 +1182,66 @@ static NSArray* FilteredTimelineSections(TFNItemsDataViewController* dataViewCon
     return modified ? [filteredSections copy] : sections;
 }
 
+// X 12.24.1 can keep a module's items in an opaque section controller. The
+// item-level fallback removes recommendation cards, but without this module
+// fallback its separate "Who to follow" header and "Show more" footer remain.
+// Classifying the controller's stable scribeComponent collapses the complete
+// module without relying on localized labels.
+static BOOL BHTShouldCollapseTimelineModule(id controller) {
+    return BHTShouldHideTimelineCleanupItem(controller);
+}
+
+%hook T1URTTimelineModuleViewModelSectionController
+
+- (double)tableViewHeightForItem:(id)item
+                     atIndexPath:(NSIndexPath*)indexPath {
+    return BHTShouldCollapseTimelineModule(self) ? 0.0 : %orig;
+}
+
+- (double)estimatedTableViewHeightForItem:(id)item
+                              atIndexPath:(NSIndexPath*)indexPath {
+    return BHTShouldCollapseTimelineModule(self) ? 0.0 : %orig;
+}
+
+- (id)tableView:(UITableView*)tableView
+    viewForHeaderInSection:(NSInteger)section {
+    return BHTShouldCollapseTimelineModule(self) ? nil : %orig;
+}
+
+- (double)tableView:(UITableView*)tableView
+    heightForHeaderInSection:(NSInteger)section {
+    // UITableView treats zero as "use the default" for section chrome.
+    return BHTShouldCollapseTimelineModule(self) ? CGFLOAT_MIN : %orig;
+}
+
+- (id)tableView:(UITableView*)tableView
+    viewForFooterInSection:(NSInteger)section {
+    return BHTShouldCollapseTimelineModule(self) ? nil : %orig;
+}
+
+- (double)tableView:(UITableView*)tableView
+    heightForFooterInSection:(NSInteger)section {
+    return BHTShouldCollapseTimelineModule(self) ? CGFLOAT_MIN : %orig;
+}
+
+- (CGSize)collectionViewSizeForItem:(id)item
+                  constrainedToSize:(CGSize)size
+                        atIndexPath:(NSIndexPath*)indexPath {
+    return BHTShouldCollapseTimelineModule(self) ? CGSizeZero : %orig;
+}
+
+- (CGSize)collectionView:(UICollectionView*)collectionView
+    sizeForHeaderInSection:(NSInteger)section {
+    return BHTShouldCollapseTimelineModule(self) ? CGSizeZero : %orig;
+}
+
+- (CGSize)collectionView:(UICollectionView*)collectionView
+    sizeForFooterInSection:(NSInteger)section {
+    return BHTShouldCollapseTimelineModule(self) ? CGSizeZero : %orig;
+}
+
+%end
+
 %hook T1URTViewController
 
 - (void)viewWillAppear:(BOOL)animated {

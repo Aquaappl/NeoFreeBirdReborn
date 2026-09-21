@@ -5,6 +5,19 @@
 #import <objc/runtime.h>
 #include <string.h>
 
+// URT view models and section controllers are immutable after X delivers
+// them. Cache their cleanup classification because table/collection layout
+// can ask about the same object many times during a single scroll.
+static char kBHTTimelineCleanupClassificationKey;
+static const NSUInteger BHTTimelineCleanupKindMask =
+    BHTTimelineCleanupKindWhoToFollow |
+    BHTTimelineCleanupKindPrompt |
+    BHTTimelineCleanupKindDiscoverMore |
+    BHTTimelineCleanupKindTopicPost |
+    BHTTimelineCleanupKindTopicSuggestion;
+static const NSUInteger BHTTimelineCleanupIdentifiersEvaluated = 1 << 8;
+static const NSUInteger BHTTimelineCleanupTopicEvaluated = 1 << 9;
+
 static const char* BHTCleanupUnqualifiedType(const char* type) {
     while (type && type[0] && strchr("rnNoORV", type[0])) type++;
     return type;
@@ -257,25 +270,60 @@ static BOOL BHTCleanupItemHasTopicContext(id item) {
            [contextClass hasSuffix:@"TweetTopicFeedbackContext"];
 }
 
-BHTTimelineCleanupKind BHTTimelineCleanupKindsForItem(id item) {
-    if (!item) return BHTTimelineCleanupKindNone;
-    id viewModel = BHTCleanupUnwrapItem(item);
-    BHTTimelineCleanupKind kinds =
-        BHTTimelineCleanupKindsForIdentifiers(
-            NSStringFromClass([viewModel classForCoder]),
-            BHTCleanupStringValue(viewModel, @"scribeComponent"),
-            BHTCleanupStringValue(viewModel, @"entryID"));
+static NSUInteger BHTCleanupCachedStateForItem(
+    id item, BOOL includeTopicContext) {
+    if (!item) return BHTTimelineCleanupIdentifiersEvaluated |
+                      (includeTopicContext
+                           ? BHTTimelineCleanupTopicEvaluated
+                           : 0);
 
-    if (viewModel != item) {
-        kinds |= BHTTimelineCleanupKindsForIdentifiers(
-            NSStringFromClass([item classForCoder]),
-            BHTCleanupStringValue(item, @"scribeComponent"),
-            BHTCleanupStringValue(item, @"entryID"));
+    NSNumber* cached = objc_getAssociatedObject(
+        item, &kBHTTimelineCleanupClassificationKey);
+    NSUInteger state = [cached isKindOfClass:NSNumber.class]
+                           ? cached.unsignedIntegerValue
+                           : 0;
+    NSUInteger originalState = state;
+    id viewModel = BHTCleanupUnwrapItem(item);
+
+    if (!(state & BHTTimelineCleanupIdentifiersEvaluated)) {
+        BHTTimelineCleanupKind kinds =
+            BHTTimelineCleanupKindsForIdentifiers(
+                NSStringFromClass([viewModel classForCoder]),
+                BHTCleanupStringValue(viewModel, @"scribeComponent"),
+                BHTCleanupStringValue(viewModel, @"entryID"));
+
+        if (viewModel != item) {
+            kinds |= BHTTimelineCleanupKindsForIdentifiers(
+                NSStringFromClass([item classForCoder]),
+                BHTCleanupStringValue(item, @"scribeComponent"),
+                BHTCleanupStringValue(item, @"entryID"));
+        }
+        state |= kinds | BHTTimelineCleanupIdentifiersEvaluated;
     }
-    if (BHTCleanupItemHasTopicContext(viewModel)) {
-        kinds |= BHTTimelineCleanupKindTopicPost;
+
+    // Topic inspection traverses status metadata and is the expensive part of
+    // classification. Do it only when the Topic-post toggle can use it, then
+    // remember both positive and negative results.
+    if (includeTopicContext &&
+        !(state & BHTTimelineCleanupTopicEvaluated)) {
+        if (BHTCleanupItemHasTopicContext(viewModel)) {
+            state |= BHTTimelineCleanupKindTopicPost;
+        }
+        state |= BHTTimelineCleanupTopicEvaluated;
     }
-    return kinds;
+
+    if (!cached || state != originalState) {
+        objc_setAssociatedObject(
+            item, &kBHTTimelineCleanupClassificationKey, @(state),
+            OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+    return state;
+}
+
+BHTTimelineCleanupKind BHTTimelineCleanupKindsForItem(id item) {
+    return (BHTTimelineCleanupKind)(
+        BHTCleanupCachedStateForItem(item, YES) &
+        BHTTimelineCleanupKindMask);
 }
 
 BHTTimelineCleanupKind BHTEnabledTimelineCleanupKinds(void) {
@@ -300,8 +348,12 @@ BHTTimelineCleanupKind BHTEnabledTimelineCleanupKinds(void) {
 
 BOOL BHTShouldHideTimelineCleanupItemForKinds(
     id item, BHTTimelineCleanupKind enabledKinds) {
-    return enabledKinds != BHTTimelineCleanupKindNone &&
-           (BHTTimelineCleanupKindsForItem(item) & enabledKinds) != 0;
+    if (!item || enabledKinds == BHTTimelineCleanupKindNone) return NO;
+    BOOL includeTopicContext =
+        (enabledKinds & BHTTimelineCleanupKindTopicPost) != 0;
+    NSUInteger state = BHTCleanupCachedStateForItem(
+        item, includeTopicContext);
+    return (state & enabledKinds & BHTTimelineCleanupKindMask) != 0;
 }
 
 BOOL BHTShouldHideTimelineCleanupItem(id item) {

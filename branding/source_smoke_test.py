@@ -4275,11 +4275,11 @@ def main() -> None:
             "navigation delegate"
         )
 
-    if "Version: 6.1.0-beta.58" not in (
+    if "Version: 6.1.0-beta.59" not in (
         ROOT / "control"
     ).read_text(encoding="utf-8"):
         raise AssertionError(
-            "Expanded X 12.24.1 timeline cleanup must ship as beta.58"
+            "Profile module cleanup and scroll caching must ship as beta.59"
         )
 
     branding_source = (
@@ -5538,8 +5538,14 @@ def main() -> None:
             "TFNTwitterTweetTopicFeedbackContext",
             "list_creation_recommended_users_timeline",
             "list_edit_recommended_users_timeline",
+            "kBHTTimelineCleanupClassificationKey",
+            "BHTTimelineCleanupIdentifiersEvaluated",
+            "BHTTimelineCleanupTopicEvaluated",
+            "includeTopicContext",
+            "objc_getAssociatedObject",
+            "objc_setAssociatedObject",
         ),
-        "X 12.24.1 timeline cleanup identifiers and Topic metadata",
+        "cached X 12.24.1 cleanup identifiers and gated Topic metadata",
     )
     require_source_tokens(
         timeline_source,
@@ -5548,8 +5554,29 @@ def main() -> None:
             "BHTShouldHideTimelineCleanupItemForKinds",
             "BHTShouldHideTimelineCleanupItem(item)",
             "cleanupFiltersChanged",
+            "%hook T1URTTimelineModuleViewModelSectionController",
+            "BHTShouldCollapseTimelineModule",
+            "heightForHeaderInSection",
+            "heightForFooterInSection",
+            "collectionViewSizeForItem",
+            "sizeForHeaderInSection",
+            "sizeForFooterInSection",
         ),
-        "structural and render-time timeline cleanup",
+        "structural, module-level, and render-time timeline cleanup",
+    )
+    hook_helpers_source = (
+        ROOT / "src" / "Hooks" / "HookHelpers.m"
+    ).read_text(encoding="utf-8")
+    require_source_tokens(
+        hook_helpers_source,
+        (
+            '@"URTModuleHeaderViewModel"',
+            '@"URTModuleFeedbackListHeaderViewModel"',
+            '@"URTModuleFooterViewModel"',
+            '@"URTModuleSeparatorFooterViewModel"',
+            "while (j < count && IsModuleFooterItem(items[j]))",
+        ),
+        "current Swift module header, Show more, and separator cleanup",
     )
     cleanup_filter_call = source_section(
         timeline_source,

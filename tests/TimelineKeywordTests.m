@@ -28,6 +28,31 @@
 @implementation TFNTwitterStatus
 @end
 
+static NSUInteger BHTTopicContextReadCount = 0;
+
+@interface BHTCountingTwitterStatus : TFNTwitterStatus
+@end
+@implementation BHTCountingTwitterStatus
+- (id)tweetContext {
+    BHTTopicContextReadCount++;
+    return [super tweetContext];
+}
+@end
+
+static NSUInteger BHTScribeComponentReadCount = 0;
+
+@interface BHTCountingCleanupModule : NSObject {
+@public
+    NSString* _scribeComponent;
+}
+@end
+@implementation BHTCountingCleanupModule
+- (NSString*)scribeComponent {
+    BHTScribeComponentReadCount++;
+    return _scribeComponent;
+}
+@end
+
 @interface TFNTwitterTweetTopicFeedbackContext : NSObject
 @end
 @implementation TFNTwitterTweetTopicFeedbackContext
@@ -81,6 +106,54 @@ int main(void) {
                        BHTTimelineCleanupKindTopicPost) != 0,
                   @"X 12.24.1 topic feedback metadata identifies Topic posts");
         status.tweetContext = nil;
+
+        BHTCountingTwitterStatus* countingStatus =
+            [BHTCountingTwitterStatus new];
+        TFNTwitterTweetContext* countingTopicContext =
+            [TFNTwitterTweetContext new];
+        countingTopicContext.topicFeedbackContext =
+            [TFNTwitterTweetTopicFeedbackContext new];
+        countingStatus.tweetContext = countingTopicContext;
+        T1URTTimelineStatusItemViewModel* countingItem =
+            [T1URTTimelineStatusItemViewModel new];
+        countingItem.tweet = countingStatus;
+        BHTTopicContextReadCount = 0;
+        NSCAssert(!BHTShouldHideTimelineCleanupItemForKinds(
+                       countingItem,
+                       BHTTimelineCleanupKindWhoToFollow),
+                  @"Unrelated cleanup toggles leave Topic posts visible");
+        NSCAssert(!BHTShouldHideTimelineCleanupItemForKinds(
+                       countingItem,
+                       BHTTimelineCleanupKindWhoToFollow),
+                  @"Repeated unrelated classification stays visible");
+        NSCAssert(BHTTopicContextReadCount == 0,
+                  @"Topic metadata is skipped while its toggle is disabled");
+        NSCAssert(BHTShouldHideTimelineCleanupItemForKinds(
+                      countingItem,
+                      BHTTimelineCleanupKindTopicPost),
+                  @"Topic metadata is evaluated when requested");
+        NSCAssert(BHTShouldHideTimelineCleanupItemForKinds(
+                      countingItem,
+                      BHTTimelineCleanupKindTopicPost),
+                  @"Cached Topic classification stays hidden");
+        NSCAssert(BHTTopicContextReadCount == 1,
+                  @"Timeline cleanup classifies each immutable item once");
+
+        BHTCountingCleanupModule* cleanupModule =
+            [BHTCountingCleanupModule new];
+        cleanupModule->_scribeComponent = @"suggest_who_to_follow";
+        BHTScribeComponentReadCount = 0;
+        NSCAssert(BHTShouldHideTimelineCleanupItemForKinds(
+                      cleanupModule,
+                      BHTTimelineCleanupKindWhoToFollow),
+                  @"Who-to-follow module controllers are classified");
+        NSCAssert(BHTShouldHideTimelineCleanupItemForKinds(
+                      cleanupModule,
+                      BHTTimelineCleanupKindWhoToFollow),
+                  @"Cached module classification stays hidden");
+        NSCAssert(BHTScribeComponentReadCount == 1,
+                  @"Module identifiers are inspected only once");
+
         NSCAssert(!hidden(item), @"Ordinary posts remain visible");
         status.canonicalStatus = [TFNTwitterCanonicalStatus new];
         status.canonicalStatus.originalText = @"@Grok Explain this please";
@@ -128,7 +201,7 @@ int main(void) {
         NSCAssert([BHTLikesNavigationUtility originalIndexForVisibleIndex:3 originalCount:4] == NSNotFound, @"Out of range is rejected");
         [BHTLikesNavigationUtility resetSelection];
         NSCAssert([[BHTLikesNavigationUtility visiblePageIDsInOrder] isEqualToArray:destinations], @"Restore defaults restores every native destination");
-        puts("PASS: original text, mention metadata, hydration/cache edits, row types, quoted-text isolation, filter removal, and Likes destination mapping");
+        puts("PASS: original text, mention metadata, cleanup caching, hydration/cache edits, row types, quoted-text isolation, filter removal, and Likes destination mapping");
     }
     return 0;
 }
