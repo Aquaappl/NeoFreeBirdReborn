@@ -14,21 +14,21 @@ typedef NS_OPTIONS(NSUInteger, BHTTimelineCleanupKind) {
 // Classifies X's stable URT identifiers. This is intentionally separate from
 // visible labels so localization and wording changes cannot bypass cleanup.
 FOUNDATION_EXPORT BHTTimelineCleanupKind
-BHTTimelineCleanupKindsForIdentifiers(nullable NSString* className,
-                                      nullable NSString* scribeComponent,
-                                      nullable NSString* entryID);
+BHTTimelineCleanupKindsForIdentifiers(NSString* _Nullable className,
+                                      NSString* _Nullable scribeComponent,
+                                      NSString* _Nullable entryID);
 
 // Classifies a live timeline item, including topic metadata stored on the
 // underlying TFNTwitterStatus in current X builds.
 FOUNDATION_EXPORT BHTTimelineCleanupKind
-BHTTimelineCleanupKindsForItem(nullable id item);
+BHTTimelineCleanupKindsForItem(id _Nullable item);
 
 FOUNDATION_EXPORT BHTTimelineCleanupKind
 BHTEnabledTimelineCleanupKinds(void);
 
 FOUNDATION_EXPORT BOOL BHTShouldHideTimelineCleanupItemForKinds(
-    nullable id item, BHTTimelineCleanupKind enabledKinds);
+    id _Nullable item, BHTTimelineCleanupKind enabledKinds);
 FOUNDATION_EXPORT BOOL
-BHTShouldHideTimelineCleanupItem(nullable id item);
+BHTShouldHideTimelineCleanupItem(id _Nullable item);
 
 NS_ASSUME_NONNULL_END
