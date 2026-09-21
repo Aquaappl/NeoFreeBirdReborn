@@ -4275,11 +4275,11 @@ def main() -> None:
             "navigation delegate"
         )
 
-    if "Version: 6.1.0-beta.56" not in (
+    if "Version: 6.1.0-beta.57" not in (
         ROOT / "control"
     ).read_text(encoding="utf-8"):
         raise AssertionError(
-            "Secure web sign-in changes must ship as beta.56"
+            "Secure web sign-in account-state guards must ship as beta.57"
         )
 
     branding_source = (
@@ -4788,6 +4788,27 @@ def main() -> None:
     feature_switches_source = (
         ROOT / "src" / "Hooks" / "FeatureSwitches.x"
     ).read_text(encoding="utf-8")
+    require_source_tokens(
+        feature_switches_source,
+        (
+            "BHTInstallSecureWebSessionAccountStateAccessors",
+            "method_setImplementation(method, replacement)",
+            "class_addMethod(accountClass, selector, replacement, fallbackTypes)",
+            "BHTSecureWebSessionOwnsNativeAccount(account)",
+            "BHTTwitterAccountUsesWebSessionPlaceholder(account)",
+            '@"hasOAuthTokens"',
+        ),
+        "version-safe web-session account-state accessors",
+    )
+    for unsafe_hook in (
+        "- (NSInteger)loginState {",
+        "- (BOOL)isAuthorized {",
+    ):
+        if unsafe_hook in feature_switches_source:
+            raise AssertionError(
+                "Web-session account state must be installed dynamically "
+                "because X 12.24.1 does not declare these selectors"
+            )
     sidebar_utility_header = (
         ROOT
         / "src"
