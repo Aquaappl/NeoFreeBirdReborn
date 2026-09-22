@@ -6,12 +6,17 @@
 #import "HookHelpers.h"
 #import "Compatibility/BHTCompatibilityReporter.h"
 #import "Timeline/BHTTimelineCleanup.h"
+#include <stdatomic.h>
 #include <string.h>
 
 static char kBHTHiddenAdCellKey;
 static char kBHTRecordedAdCellKey;
 static char kBHTPromotionClassDecisionKey;
 static char kBHTTimelineFilterDecisionKey;
+static atomic_uint_fast64_t kBHTTimelineFilterSettingsGeneration =
+    ATOMIC_VAR_INIT(0);
+static atomic_uint_fast32_t kBHTTimelineFilterSettingsSignature =
+    ATOMIC_VAR_INIT(0);
 
 static const char* BHTUnqualifiedType(const char* type) {
     while (type && strchr("rnNoORV", type[0])) type++;
@@ -190,18 +195,20 @@ static BOOL BHTNestedObjectMarksPromotion(id object, NSUInteger depth) {
 
 // The promoted state of a status item is only reachable through its Swift-side
 // `status` stored property, which is still registered as an ObjC ivar.
-static BOOL StatusItemIsPromoted(id item) {
-    TFNTwitterStatus* status = BHTObjectForSelector(item, @selector(status));
+static BOOL StatusItemPromotionDecision(id item, BOOL* statusResolved) {
+    id status = BHTObjectForSelector(item, @selector(status));
 
     Ivar statusIvar = class_getInstanceVariable([item class], "status");
     if (!statusIvar) {
         statusIvar = class_getInstanceVariable([item class], "_status");
     }
-    if (!statusIvar) {
-        return BHTBoolForSelector(status, @selector(isPromoted));
+    if (!status && statusIvar) {
+        status = object_getIvar(item, statusIvar);
     }
 
-    status = status ?: object_getIvar(item, statusIvar);
+    BOOL resolved =
+        status && [status respondsToSelector:@selector(isPromoted)];
+    if (statusResolved) *statusResolved = resolved;
     return BHTBoolForSelector(status, @selector(isPromoted));
 }
 
@@ -272,11 +279,35 @@ static BOOL ScribeItemIsPromoted(id item) {
            BHTDictionaryMarksPromotion(scribeParameters);
 }
 
-static BOOL ShouldHideItem(id item, NSString* location) {
+static NSUInteger BHTTimelineFilterSettingsSignature(void) {
+    NSUInteger generation = [BHTSettings preferenceGeneration];
+    NSUInteger cachedGeneration = (NSUInteger)atomic_load_explicit(
+        &kBHTTimelineFilterSettingsGeneration, memory_order_acquire);
+    if (cachedGeneration == generation) {
+        return (NSUInteger)atomic_load_explicit(
+            &kBHTTimelineFilterSettingsSignature,
+            memory_order_relaxed);
+    }
+
+    NSUInteger signature =
+        ([BHTSettings boolForKey:@"hide_promoted"] ? 1u : 0u) |
+        ([BHTSettings boolForKey:@"hide_premium_offer"] ? 2u : 0u) |
+        ([BHTSettings boolForKey:@"hide_trend_videos"] ? 4u : 0u);
+    atomic_store_explicit(
+        &kBHTTimelineFilterSettingsSignature,
+        (uint_fast32_t)signature, memory_order_relaxed);
+    atomic_store_explicit(
+        &kBHTTimelineFilterSettingsGeneration,
+        (uint_fast64_t)generation, memory_order_release);
+    return signature;
+}
+
+static BOOL ShouldHideItem(id item, NSString* location,
+                           NSUInteger settingsSignature) {
     item = unwrapDataViewItem(item);
     NSString* className = NSStringFromClass([item classForCoder]);
 
-    if ([BHTSettings boolForKey:@"hide_promoted"]) {
+    if (settingsSignature & 1u) {
         if (BHTBoolForSelector(item, @selector(isPromoted)) ||
             BHTBoolForSelector(item, NSSelectorFromString(@"isAd")) ||
             BHTBoolForSelector(item, NSSelectorFromString(@"isAdvertisement")) ||
@@ -285,10 +316,12 @@ static BOOL ShouldHideItem(id item, NSString* location) {
             return YES;
         }
 
-        if (StatusItemIsPromoted(item) ||
+        BOOL statusResolved = NO;
+        if (StatusItemPromotionDecision(item, &statusResolved) ||
             BHTClassMarksPromotion([item classForCoder]) ||
             ScribeItemIsPromoted(item) ||
             ([className isEqualToString:@"T1URTTimelineStatusItemViewModel"] &&
+             !statusResolved &&
              BHTNestedObjectMarksPromotion(item, 0))) {
             return YES;
         }
@@ -316,14 +349,14 @@ static BOOL ShouldHideItem(id item, NSString* location) {
         }
     }
 
-    if ([BHTSettings boolForKey:@"hide_premium_offer"]) {
+    if (settingsSignature & 2u) {
         if ([className
                 isEqualToString:@"TwitterURT.URTTimelineMessageItemViewModel"]) {
             return YES;
         }
     }
 
-    if ([BHTSettings boolForKey:@"hide_trend_videos"] &&
+    if ((settingsSignature & 4u) &&
         [location isEqualToString:@"OTHER"]) {
         if ([className
                 isEqualToString:@"T1TwitterSwift.URTTimelineCarouselViewModel"]) {
@@ -334,7 +367,8 @@ static BOOL ShouldHideItem(id item, NSString* location) {
     return NO;
 }
 
-static BOOL ShouldHideAndRecord(id item, NSString* location) {
+static BOOL ShouldHideAndRecordWithSignature(
+    id item, NSString* location, NSUInteger settingsSignature) {
     id unwrapped = unwrapDataViewItem(item);
     if (!unwrapped) return NO;
 
@@ -342,10 +376,6 @@ static BOOL ShouldHideAndRecord(id item, NSString* location) {
     // the same item from section filtering, adapter lookup, cell creation, and
     // row sizing. Cache the decision per filter settings/location so expensive
     // Swift/KVC promotion inspection runs once per item instead of per pass.
-    NSUInteger settingsSignature =
-        ([BHTSettings boolForKey:@"hide_promoted"] ? 1u : 0u) |
-        ([BHTSettings boolForKey:@"hide_premium_offer"] ? 2u : 0u) |
-        ([BHTSettings boolForKey:@"hide_trend_videos"] ? 4u : 0u);
     NSString* cacheLocation = location ?: @"";
     NSDictionary* cachedDecisions =
         objc_getAssociatedObject(unwrapped, &kBHTTimelineFilterDecisionKey);
@@ -355,7 +385,8 @@ static BOOL ShouldHideAndRecord(id item, NSString* location) {
         return (packedDecision.unsignedIntegerValue & 1u) != 0;
     }
 
-    BOOL hidden = ShouldHideItem(unwrapped, location);
+    BOOL hidden = ShouldHideItem(
+        unwrapped, location, settingsSignature);
     BHTRecordTimelineItemObservation(item, location, hidden);
     if (unwrapped != item) {
         BHTRecordTimelineItemObservation(unwrapped, location, hidden);
@@ -372,11 +403,16 @@ static BOOL ShouldHideAndRecord(id item, NSString* location) {
     return hidden;
 }
 
+static BOOL ShouldHideAndRecord(id item, NSString* location) {
+    return ShouldHideAndRecordWithSignature(
+        item, location, BHTTimelineFilterSettingsSignature());
+}
+
 NSArray* BHTFilteredTimelineSections(
     TFNItemsDataViewController* dataViewController, NSArray* sections) {
-    if (!([BHTSettings boolForKey:@"hide_promoted"] ||
-          [BHTSettings boolForKey:@"hide_premium_offer"] ||
-          [BHTSettings boolForKey:@"hide_trend_videos"])) {
+    NSUInteger settingsSignature =
+        BHTTimelineFilterSettingsSignature();
+    if (settingsSignature == 0) {
         return sections;
     }
 
@@ -400,7 +436,8 @@ NSArray* BHTFilteredTimelineSections(
         NSMutableIndexSet* removed = [NSMutableIndexSet indexSet];
 
         for (NSUInteger i = 0; i < count; i++) {
-            if (ShouldHideAndRecord(items[i], location)) {
+            if (ShouldHideAndRecordWithSignature(
+                    items[i], location, settingsSignature)) {
                 [removed addIndex:i];
             }
         }

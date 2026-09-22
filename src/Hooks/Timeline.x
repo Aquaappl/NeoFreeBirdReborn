@@ -22,6 +22,8 @@ static char kBHTForYouTimelineRoleKey;
 static char kBHTForYouKeywordDecisionKey;
 static char kBHTForYouControllerGenerationKey;
 static char kBHTTimelineCleanupStateKey;
+static char kBHTTimelineContentGenerationKey;
+static char kBHTForYouControllerRoleDecisionKey;
 
 typedef NS_ENUM(NSInteger, BHTHomeTimelineRole) {
     BHTHomeTimelineRoleNonForYou = 0,
@@ -39,12 +41,22 @@ typedef NS_ENUM(NSInteger, BHTHomeTimelineRole) {
 
 @interface BHTForYouKeywordDecisionCache : NSObject
 @property(nonatomic) NSUInteger generation;
+@property(nonatomic) NSUInteger contentGeneration;
 @property(nonatomic) BOOL hidden;
+@property(nonatomic, weak) id timelineOwner;
 @property(nonatomic, copy) NSArray<NSString*>* usernameCandidates;
 @property(nonatomic, copy) NSArray<NSString*>* postTextCandidates;
 @end
 
 @implementation BHTForYouKeywordDecisionCache
+@end
+
+@interface BHTForYouControllerRoleDecisionCache : NSObject
+@property(nonatomic) NSUInteger contentGeneration;
+@property(nonatomic) BOOL primary;
+@end
+
+@implementation BHTForYouControllerRoleDecisionCache
 @end
 
 static NSMutableArray<BHTHomeTimelineRegistryEntry*>*
@@ -594,6 +606,21 @@ static UIViewController* NearestURTTimelineController(
     return nil;
 }
 
+static NSUInteger BHTTimelineContentGeneration(id controller) {
+    NSNumber* generation = objc_getAssociatedObject(
+        controller, &kBHTTimelineContentGenerationKey);
+    return MAX((NSUInteger)1, generation.unsignedIntegerValue);
+}
+
+static NSUInteger BHTAdvanceTimelineContentGeneration(id controller) {
+    NSUInteger generation =
+        BHTTimelineContentGeneration(controller) + 1;
+    objc_setAssociatedObject(
+        controller, &kBHTTimelineContentGenerationKey, @(generation),
+        OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    return generation;
+}
+
 static BOOL BHTIsPrimaryForYouURTController(id urtController) {
     Class urtControllerClass = NSClassFromString(@"T1URTViewController");
     if (!urtControllerClass ||
@@ -678,6 +705,29 @@ static BOOL BHTIsPrimaryForYouURTController(id urtController) {
     BHTRecordForYouFilterDiagnostic(
         primary ? BHTForYouFilterDiagnosticControllerPrimary
                 : BHTForYouFilterDiagnosticControllerNonForYou);
+    return primary;
+}
+
+static BOOL BHTCachedIsPrimaryForYouURTController(id urtController) {
+    NSUInteger contentGeneration =
+        BHTTimelineContentGeneration(urtController);
+    BHTForYouControllerRoleDecisionCache* cached =
+        objc_getAssociatedObject(
+            urtController, &kBHTForYouControllerRoleDecisionKey);
+    if ([cached
+            isKindOfClass:BHTForYouControllerRoleDecisionCache.class] &&
+        cached.contentGeneration == contentGeneration) {
+        return cached.primary;
+    }
+
+    BOOL primary = BHTIsPrimaryForYouURTController(urtController);
+    BHTForYouControllerRoleDecisionCache* updated =
+        [BHTForYouControllerRoleDecisionCache new];
+    updated.contentGeneration = contentGeneration;
+    updated.primary = primary;
+    objc_setAssociatedObject(
+        urtController, &kBHTForYouControllerRoleDecisionKey, updated,
+        OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     return primary;
 }
 
@@ -1011,7 +1061,8 @@ static BOOL ComputeShouldHideForYouKeywordItem(
 
 static BOOL ShouldHideForYouKeywordItem(
     id item, NSUInteger generation, BOOL hasUsernameFilters,
-    BOOL hasPostTextFilters) {
+    BOOL hasPostTextFilters, id timelineOwner,
+    NSUInteger contentGeneration) {
     id cacheOwner = unwrapDataViewItem(item);
     if (!BHTIsKeywordStatusViewModel(cacheOwner)) {
         return NO;
@@ -1028,6 +1079,20 @@ static BOOL ShouldHideForYouKeywordItem(
         BHTRecordForYouFilterDiagnostic(
             BHTForYouFilterDiagnosticMissingStatus);
         return NO;
+    }
+
+    BHTForYouKeywordDecisionCache* cached =
+        objc_getAssociatedObject(outerStatus,
+                                 &kBHTForYouKeywordDecisionKey);
+    if (timelineOwner &&
+        [cached
+            isKindOfClass:BHTForYouKeywordDecisionCache.class] &&
+        cached.generation == generation &&
+        cached.timelineOwner == timelineOwner &&
+        cached.contentGeneration == contentGeneration) {
+        BHTRecordForYouFilterDiagnostic(
+            BHTForYouFilterDiagnosticDecisionCacheHit);
+        return cached.hidden;
     }
 
     NSArray<NSString*>* postTextCandidates =
@@ -1047,15 +1112,11 @@ static BOOL ShouldHideForYouKeywordItem(
                   postTextCandidates)
             : @[];
 
-    // X may hydrate or replace text after a section's first delivery. Cache
-    // both decisions together with the exact trusted inputs rather than
-    // treating the view model as permanently immutable. Repeated updates stay
-    // cheap, while newly available fullText/@mentions automatically invalidate
-    // an earlier NO. The strict controller gate keeps this cache out of
-    // Following, and a filter edit changes the generation.
-    BHTForYouKeywordDecisionCache* cached =
-        objc_getAssociatedObject(outerStatus,
-                                 &kBHTForYouKeywordDecisionKey);
+    // A delivered section is stable across its many sizing/cell callbacks, so
+    // the owner/content generation fast path above avoids rebuilding text and
+    // mention candidates while scrolling. X can hydrate or replace text in a
+    // later section update; that advances contentGeneration. The exact-input
+    // comparison remains as a safe fallback for direct/non-controller use.
     if ([cached
             isKindOfClass:BHTForYouKeywordDecisionCache.class] &&
         cached.generation == generation &&
@@ -1065,6 +1126,8 @@ static BOOL ShouldHideForYouKeywordItem(
             isEqualToArray:postTextCandidates]) {
         BHTRecordForYouFilterDiagnostic(
             BHTForYouFilterDiagnosticDecisionCacheHit);
+        cached.timelineOwner = timelineOwner;
+        cached.contentGeneration = contentGeneration;
         return cached.hidden;
     }
 
@@ -1074,7 +1137,9 @@ static BOOL ShouldHideForYouKeywordItem(
     BHTForYouKeywordDecisionCache* updated =
         [BHTForYouKeywordDecisionCache new];
     updated.generation = generation;
+    updated.contentGeneration = contentGeneration;
     updated.hidden = hidden;
+    updated.timelineOwner = timelineOwner;
     updated.usernameCandidates = usernameCandidates;
     updated.postTextCandidates = postTextCandidates;
     objc_setAssociatedObject(
@@ -1092,11 +1157,14 @@ static BOOL BHTShouldHideForYouKeywordItemInURTController(
             filterGenerationWithUsernameFilters:&hasUsernameFilters
                                  postTextFilters:&hasPostTextFilters];
     if (!(hasUsernameFilters || hasPostTextFilters) ||
-        !BHTIsPrimaryForYouURTController(urtController)) {
+        !BHTCachedIsPrimaryForYouURTController(urtController)) {
         return NO;
     }
+    NSUInteger contentGeneration =
+        BHTTimelineContentGeneration(urtController);
     return ShouldHideForYouKeywordItem(
-        item, generation, hasUsernameFilters, hasPostTextFilters);
+        item, generation, hasUsernameFilters, hasPostTextFilters,
+        urtController, contentGeneration);
 }
 
 static BOOL ShouldHideTimelineItem(id item,
@@ -1104,7 +1172,9 @@ static BOOL ShouldHideTimelineItem(id item,
                                    BOOL filterForYouKeywords,
                                    NSUInteger keywordFilterGeneration,
                                    BOOL hasUsernameFilters,
-                                   BOOL hasPostTextFilters) {
+                                   BOOL hasPostTextFilters,
+                                   id timelineOwner,
+                                   NSUInteger contentGeneration) {
     id viewModel = unwrapDataViewItem(item);
     if (BHTShouldHideTimelineCleanupItemForKinds(viewModel,
                                                  cleanupKinds)) {
@@ -1114,7 +1184,8 @@ static BOOL ShouldHideTimelineItem(id item,
     if (filterForYouKeywords &&
         ShouldHideForYouKeywordItem(
             viewModel, keywordFilterGeneration, hasUsernameFilters,
-            hasPostTextFilters)) {
+            hasPostTextFilters, timelineOwner,
+            contentGeneration)) {
         return YES;
     }
 
@@ -1134,6 +1205,8 @@ static NSArray* FilteredTimelineSections(TFNItemsDataViewController* dataViewCon
     BOOL filterForYouKeywords =
         (hasUsernameFilters || hasPostTextFilters) &&
         IsPrimaryForYouTimelineController(dataViewController);
+    NSUInteger contentGeneration =
+        BHTTimelineContentGeneration(dataViewController);
 
     if (cleanupKinds == BHTTimelineCleanupKindNone &&
         !filterForYouKeywords) {
@@ -1159,7 +1232,9 @@ static NSArray* FilteredTimelineSections(TFNItemsDataViewController* dataViewCon
                                        filterForYouKeywords,
                                        keywordFilterGeneration,
                                        hasUsernameFilters,
-                                       hasPostTextFilters)) {
+                                       hasPostTextFilters,
+                                       dataViewController,
+                                       contentGeneration)) {
                 [removed addIndex:i];
             }
         }
@@ -1247,6 +1322,12 @@ static BOOL BHTShouldCollapseTimelineModule(id controller) {
 - (void)viewWillAppear:(BOOL)animated {
     %orig;
 
+    // A controller can be reused after switching feeds. Start a fresh content
+    // generation so its cached role and keyword decisions cannot cross that
+    // boundary, while repeated layout callbacks within this appearance stay
+    // cheap.
+    BHTAdvanceTimelineContentGeneration(self);
+
     // Returning from NeoFreeBird settings must re-evaluate already-loaded
     // rows after keyword lists or cleanup toggles change. This reloads only
     // X's local table snapshot; it does not issue a timeline/network refresh.
@@ -1318,6 +1399,7 @@ static BOOL BHTShouldCollapseTimelineModule(id controller) {
 %hook TFNItemsDataViewController
 
 - (void)setSections:(NSArray*)sections restoreScrollPosition:(BOOL)restoreScrollPosition {
+    BHTAdvanceTimelineContentGeneration(self);
     %orig(FilteredTimelineSections(self, sections), restoreScrollPosition);
 }
 
@@ -1325,6 +1407,7 @@ static BOOL BHTShouldCollapseTimelineModule(id controller) {
     reconfigureItemIdentifiers:(NSArray*)identifiers
               withRowAnimation:(long long)animation
                     completion:(id)completion {
+    BHTAdvanceTimelineContentGeneration(self);
     %orig(FilteredTimelineSections(self, sections), identifiers, animation, completion);
 }
 

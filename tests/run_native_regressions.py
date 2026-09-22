@@ -50,9 +50,18 @@ void BHTRecordForYouFilterDiagnostic(BHTForYouFilterDiagnosticEvent event) {}
 @end
 @interface BHTSettings : NSObject
 + (BOOL)boolForKey:(NSString*)key;
++ (NSUInteger)preferenceGeneration;
++ (void)notePreferencesChanged;
 @end
+static NSUInteger BHTTestSettingsBoolReadCount = 0;
+static NSUInteger BHTTestSettingsGeneration = 1;
 @implementation BHTSettings
-+ (BOOL)boolForKey:(NSString*)key { return [NSUserDefaults.standardUserDefaults boolForKey:key]; }
++ (BOOL)boolForKey:(NSString*)key {
+    BHTTestSettingsBoolReadCount++;
+    return [NSUserDefaults.standardUserDefaults boolForKey:key];
+}
++ (NSUInteger)preferenceGeneration { return BHTTestSettingsGeneration; }
++ (void)notePreferencesChanged { BHTTestSettingsGeneration++; }
 @end
 static BOOL ReportGenuineTabGates = NO;
 static BOOL AccountIsGenuinelyPremium(void) { return NO; }

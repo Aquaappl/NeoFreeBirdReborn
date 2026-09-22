@@ -80,7 +80,18 @@ static BOOL hidden(id item) {
     BOOL usernames, text;
     NSUInteger generation = [BHTForYouKeywordFilter
         filterGenerationWithUsernameFilters:&usernames postTextFilters:&text];
-    return ShouldHideForYouKeywordItem(item, generation, usernames, text);
+    return ShouldHideForYouKeywordItem(
+        item, generation, usernames, text, nil, 0);
+}
+
+static BOOL hiddenForContentGeneration(
+    id item, id owner, NSUInteger contentGeneration) {
+    BOOL usernames, text;
+    NSUInteger generation = [BHTForYouKeywordFilter
+        filterGenerationWithUsernameFilters:&usernames postTextFilters:&text];
+    return ShouldHideForYouKeywordItem(
+        item, generation, usernames, text, owner,
+        contentGeneration);
 }
 
 int main(void) {
@@ -89,6 +100,15 @@ int main(void) {
         testCompatibilityLogin();
         testWebSessionSecurity();
         testTimelineCleanupClassification();
+        BHTTestSettingsBoolReadCount = 0;
+        BHTEnabledTimelineCleanupKinds();
+        BHTEnabledTimelineCleanupKinds();
+        NSCAssert(BHTTestSettingsBoolReadCount == 5,
+                  @"Cleanup toggles are read once per settings generation");
+        [BHTSettings notePreferencesChanged];
+        BHTEnabledTimelineCleanupKinds();
+        NSCAssert(BHTTestSettingsBoolReadCount == 10,
+                  @"A preference change refreshes the cleanup snapshot");
         [BHTForYouKeywordFilter setKeywords:@[@"grok"] forKind:BHTForYouKeywordFilterKindUsername error:nil];
         [BHTForYouKeywordFilter setKeywords:@[] forKind:BHTForYouKeywordFilterKindPostText error:nil];
         TFNTwitterStatus* status = [TFNTwitterStatus new];
@@ -159,6 +179,29 @@ int main(void) {
         status.canonicalStatus.originalText = @"@Grok Explain this please";
         NSCAssert(hidden(item), @"Canonical leading mention must invalidate the earlier no-match");
         NSCAssert(hidden(item), @"The cached match stays correct");
+
+        NSObject* timelineOwner = [NSObject new];
+        TFNTwitterStatus* snapshotStatus = [TFNTwitterStatus new];
+        snapshotStatus.fullText = @"ordinary text";
+        snapshotStatus.canonicalStatus =
+            [TFNTwitterCanonicalStatus new];
+        snapshotStatus.canonicalStatus.originalText =
+            @"ordinary text";
+        T1URTTimelineStatusItemViewModel* snapshotItem =
+            [T1URTTimelineStatusItemViewModel new];
+        snapshotItem.tweet = snapshotStatus;
+        NSCAssert(!hiddenForContentGeneration(
+                       snapshotItem, timelineOwner, 1),
+                  @"A delivered ordinary item remains visible");
+        snapshotStatus.canonicalStatus.originalText =
+            @"@grok newly hydrated";
+        NSCAssert(!hiddenForContentGeneration(
+                       snapshotItem, timelineOwner, 1),
+                  @"Repeated layout callbacks reuse the delivered snapshot");
+        NSCAssert(hiddenForContentGeneration(
+                      snapshotItem, timelineOwner, 2),
+                  @"A later section generation sees hydrated text");
+
         [BHTForYouKeywordFilter setKeywords:@[] forKind:BHTForYouKeywordFilterKindUsername error:nil];
         [BHTForYouKeywordFilter setKeywords:@[@"grok"] forKind:BHTForYouKeywordFilterKindPostText error:nil];
         NSCAssert(hidden(item), @"The post-text filter must also cover the leading mention");

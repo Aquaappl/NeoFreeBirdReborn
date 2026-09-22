@@ -4275,12 +4275,22 @@ def main() -> None:
             "navigation delegate"
         )
 
-    if "Version: 6.1.0-beta.59" not in (
+    if "Version: 6.1.0-beta.60" not in (
         ROOT / "control"
     ).read_text(encoding="utf-8"):
         raise AssertionError(
-            "Profile module cleanup and scroll caching must ship as beta.59"
+            "Profile module cleanup and scroll caching must ship as beta.60"
         )
+
+    require_source_tokens(
+        settings_source,
+        (
+            "BHTPreferenceGeneration",
+            "+ (NSUInteger)preferenceGeneration",
+            "+ (void)notePreferencesChanged",
+        ),
+        "preference-generation cache invalidation",
+    )
 
     branding_source = (
         ROOT / "src" / "Branding" / "BHTBranding.m"
@@ -5307,7 +5317,8 @@ def main() -> None:
         ads_source,
         (
             "NSArray* BHTFilteredTimelineSections(",
-            "ShouldHideAndRecord(items[i], location)",
+            "ShouldHideAndRecordWithSignature(",
+            "items[i], location, settingsSignature",
         ),
         "shared filtered timeline snapshot",
     )
@@ -5492,6 +5503,8 @@ def main() -> None:
             "BHTForYouKeywordDecisionCache",
             "objc_getAssociatedObject(outerStatus",
             "cached.generation == generation",
+            "cached.timelineOwner == timelineOwner",
+            "cached.contentGeneration == contentGeneration",
             "isEqualToArray:usernameCandidates",
             "isEqualToArray:postTextCandidates",
             "return cached.hidden",
@@ -5500,8 +5513,15 @@ def main() -> None:
             "BHTForYouFilterDiagnosticTrustedTextCandidateSetNonEmpty",
             "UsernameCandidatesForStatuses(",
         ),
-        "content-aware For You keyword and @mention decision caching",
+        "section-generation-aware For You keyword decision caching",
     )
+    if keyword_decision_cache.find(
+        "cached.contentGeneration == contentGeneration"
+    ) > keyword_decision_cache.find("PostTextCandidates("):
+        raise AssertionError(
+            "Repeated row layout must hit the keyword cache before rebuilding "
+            "post-text candidates"
+        )
     if not re.search(
         r"UsernameCandidatesForStatuses\s*\(\s*"
         r"outerStatus\s*,\s*representedStatus\s*,\s*"
@@ -5544,6 +5564,8 @@ def main() -> None:
             "includeTopicContext",
             "objc_getAssociatedObject",
             "objc_setAssociatedObject",
+            "BHTTimelineCleanupSettingsGeneration",
+            "[BHTSettings preferenceGeneration]",
         ),
         "cached X 12.24.1 cleanup identifiers and gated Topic metadata",
     )
@@ -5594,6 +5616,18 @@ def main() -> None:
     ads_source = (
         ROOT / "src" / "Hooks" / "Ads.x"
     ).read_text(encoding="utf-8")
+    require_source_tokens(
+        ads_source,
+        (
+            "BHTTimelineFilterSettingsSignature",
+            "kBHTTimelineFilterSettingsGeneration",
+            "ShouldHideAndRecordWithSignature",
+            "StatusItemPromotionDecision",
+            "!statusResolved",
+            "[BHTSettings preferenceGeneration]",
+        ),
+        "cached ad-filter settings and bounded status inspection",
+    )
     if ads_source.count("BHTShouldHideTimelineCleanupItem") < 2:
         raise AssertionError(
             "Opaque timeline rows must apply cleanup during cell creation "

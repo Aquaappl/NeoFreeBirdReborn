@@ -3,6 +3,7 @@
 #import "Core/BHTSettings.h"
 #import <objc/message.h>
 #import <objc/runtime.h>
+#include <stdatomic.h>
 #include <string.h>
 
 // URT view models and section controllers are immutable after X delivers
@@ -17,6 +18,10 @@ static const NSUInteger BHTTimelineCleanupKindMask =
     BHTTimelineCleanupKindTopicSuggestion;
 static const NSUInteger BHTTimelineCleanupIdentifiersEvaluated = 1 << 8;
 static const NSUInteger BHTTimelineCleanupTopicEvaluated = 1 << 9;
+static atomic_uint_fast64_t BHTTimelineCleanupSettingsGeneration =
+    ATOMIC_VAR_INIT(0);
+static atomic_uint_fast32_t BHTTimelineCleanupSettingsKinds =
+    ATOMIC_VAR_INIT(BHTTimelineCleanupKindNone);
 
 static const char* BHTCleanupUnqualifiedType(const char* type) {
     while (type && type[0] && strchr("rnNoORV", type[0])) type++;
@@ -327,6 +332,14 @@ BHTTimelineCleanupKind BHTTimelineCleanupKindsForItem(id item) {
 }
 
 BHTTimelineCleanupKind BHTEnabledTimelineCleanupKinds(void) {
+    NSUInteger generation = [BHTSettings preferenceGeneration];
+    NSUInteger cachedGeneration = (NSUInteger)atomic_load_explicit(
+        &BHTTimelineCleanupSettingsGeneration, memory_order_acquire);
+    if (cachedGeneration == generation) {
+        return (BHTTimelineCleanupKind)atomic_load_explicit(
+            &BHTTimelineCleanupSettingsKinds, memory_order_relaxed);
+    }
+
     BHTTimelineCleanupKind kinds = BHTTimelineCleanupKindNone;
     if ([BHTSettings boolForKey:@"hide_who_to_follow"]) {
         kinds |= BHTTimelineCleanupKindWhoToFollow;
@@ -343,6 +356,12 @@ BHTTimelineCleanupKind BHTEnabledTimelineCleanupKinds(void) {
     if ([BHTSettings boolForKey:@"hide_topics_to_follow"]) {
         kinds |= BHTTimelineCleanupKindTopicSuggestion;
     }
+    atomic_store_explicit(
+        &BHTTimelineCleanupSettingsKinds, (uint_fast32_t)kinds,
+        memory_order_relaxed);
+    atomic_store_explicit(
+        &BHTTimelineCleanupSettingsGeneration,
+        (uint_fast64_t)generation, memory_order_release);
     return kinds;
 }
 
