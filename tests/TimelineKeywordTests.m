@@ -24,8 +24,23 @@
 @property(nonatomic, copy) NSArray* entitiesRemovingUnmentioned;
 @property(nonatomic, strong) id tweetContext;
 @property(nonatomic, strong) id banner;
+@property(nonatomic, strong) id promotedContent;
+- (BOOL)isPromoted;
 @end
 @implementation TFNTwitterStatus
+- (BOOL)isPromoted {
+    return self.promotedContent != nil;
+}
+@end
+
+// Mirrors the tweak's host-facing promotedContent hook: the public getter is
+// masked even though X's typed backing ivar still contains the ad metadata.
+@interface BHTMaskedPromotedStatus : TFNTwitterStatus
+@end
+@implementation BHTMaskedPromotedStatus
+- (id)promotedContent {
+    return nil;
+}
 @end
 
 static NSUInteger BHTTopicContextReadCount = 0;
@@ -124,6 +139,21 @@ int main(void) {
         status.text = status.fullText;
         status.fromUserName = @"reader";
         T1URTTimelineStatusItemViewModel* item = [T1URTTimelineStatusItemViewModel new];
+        item.tweet = status;
+        BOOL promotionStatusResolved = NO;
+        NSCAssert(!StatusItemPromotionDecision(
+                       item, &promotionStatusResolved) &&
+                       promotionStatusResolved,
+                  @"An ordinary status remains visible after status resolution");
+        BHTMaskedPromotedStatus* promotedStatus =
+            [BHTMaskedPromotedStatus new];
+        [promotedStatus setPromotedContent:[NSObject new]];
+        item.tweet = promotedStatus;
+        promotionStatusResolved = NO;
+        NSCAssert(StatusItemPromotionDecision(
+                      item, &promotionStatusResolved) &&
+                      promotionStatusResolved,
+                  @"Typed promoted metadata survives the masked public getter");
         item.tweet = status;
         TFNTwitterTweetContext* topicContext =
             [TFNTwitterTweetContext new];

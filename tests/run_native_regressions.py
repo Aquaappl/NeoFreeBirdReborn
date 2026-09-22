@@ -32,9 +32,12 @@ NSString* const TabPageKey = @"page";
 NSString* const TabTitleKey = @"title";
 NSString* const TabImageKey = @"image";
 static char kBHTForYouKeywordDecisionKey;
+static char kBHTPromotionClassDecisionKey;
 static id unwrapDataViewItem(id item) { return item; }
 void BHTRecordForYouFilterDiagnostic(BHTForYouFilterDiagnosticEvent event) {}
 '''
+    ads_source = (ROOT / "src/Hooks/Ads.x").read_text(encoding="utf8")
+    unit += section(ads_source, "static const char* BHTUnqualifiedType", "static BOOL ItemHasPromotedTrendID")
     unit += section(source, "@interface BHTForYouKeywordDecisionCache", "static NSMutableArray<BHTHomeTimelineRegistryEntry*>")
     unit += section(source, "static const char* SkipObjCTypeQualifiers", "static UIViewController* NearestURTTimelineController")
     unit += section(source, "static BOOL BHTIsKeywordStatusViewModel", "static BOOL BHTShouldHideForYouKeywordItemInURTController")

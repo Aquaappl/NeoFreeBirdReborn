@@ -4275,11 +4275,11 @@ def main() -> None:
             "navigation delegate"
         )
 
-    if "Version: 6.1.0-beta.61" not in (
+    if "Version: 6.1.0-beta.62" not in (
         ROOT / "control"
     ).read_text(encoding="utf-8"):
         raise AssertionError(
-            "Paginated timeline filtering fixes must ship as beta.61"
+            "Current promoted-status filtering must ship as beta.62"
         )
 
     require_source_tokens(
@@ -5658,6 +5658,22 @@ def main() -> None:
         raise AssertionError(
             "Hydrated or reused timeline items must not keep ad decisions"
         )
+    status_promotion_decision = source_section(
+        ads_source,
+        "static id BHTStatusFromTimelineItem",
+        "static BOOL ItemHasPromotedTrendID",
+        "current promoted-status decision",
+    )
+    require_source_tokens(
+        status_promotion_decision,
+        (
+            "BHTObjectForSelector(item, @selector(tweet))",
+            "[status isKindOfClass:statusClass]",
+            "ItemHasPromotedContent(status)",
+            "BHTBoolForSelector(status, @selector(isPromoted))",
+        ),
+        "X 12.24.1 promoted-status resolution with masked getter fallback",
+    )
     if ads_source.count("BHTShouldHideTimelineCleanupItem") < 2:
         raise AssertionError(
             "Opaque timeline rows must apply cleanup during cell creation "

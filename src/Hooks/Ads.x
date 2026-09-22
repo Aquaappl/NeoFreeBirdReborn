@@ -192,25 +192,6 @@ static BOOL BHTNestedObjectMarksPromotion(id object, NSUInteger depth) {
 // timeline surface (home, profile, search, conversations) regardless of whether
 // it renders through a table view or the newer diffable collection view path.
 
-// The promoted state of a status item is only reachable through its Swift-side
-// `status` stored property, which is still registered as an ObjC ivar.
-static BOOL StatusItemPromotionDecision(id item, BOOL* statusResolved) {
-    id status = BHTObjectForSelector(item, @selector(status));
-
-    Ivar statusIvar = class_getInstanceVariable([item class], "status");
-    if (!statusIvar) {
-        statusIvar = class_getInstanceVariable([item class], "_status");
-    }
-    if (!status && statusIvar) {
-        status = object_getIvar(item, statusIvar);
-    }
-
-    BOOL resolved =
-        status && [status respondsToSelector:@selector(isPromoted)];
-    if (statusResolved) *statusResolved = resolved;
-    return BHTBoolForSelector(status, @selector(isPromoted));
-}
-
 // Promoted trends and event summary heroes (the image ads at the top of
 // explore) carry their promotion in the Swift-side `promotedContent` stored
 // property, which isn't always reflected in the scribe item.
@@ -226,6 +207,48 @@ static BOOL ItemHasPromotedContent(id item) {
         promotedIvar = class_getInstanceVariable([item class], "_promotedContent");
     }
     return promotedIvar && object_getIvar(item, promotedIvar) != nil;
+}
+
+// X 12.24.1 exposes a status item's TFNTwitterStatus through the inherited
+// Objective-C `tweet` accessor. Prefer that verified object return and use the
+// known Swift `status` field only as a validated fallback for nearby builds.
+static id BHTStatusFromTimelineItem(id item) {
+    Class statusClass = objc_getClass("TFNTwitterStatus");
+    if (!item || !statusClass) return nil;
+    if ([item isKindOfClass:statusClass]) return item;
+
+    id status = BHTObjectForSelector(item, @selector(tweet));
+    if ([status isKindOfClass:statusClass]) return status;
+
+    status = BHTObjectForSelector(item, NSSelectorFromString(@"status"));
+    if ([status isKindOfClass:statusClass]) return status;
+
+    Ivar statusIvar = class_getInstanceVariable([item class], "status");
+    if (!statusIvar) {
+        statusIvar = class_getInstanceVariable([item class], "_status");
+    }
+    if (!statusIvar) return nil;
+
+    const char* type = BHTUnqualifiedType(ivar_getTypeEncoding(statusIvar));
+    BOOL objectOrKnownSwiftField =
+        !type || type[0] == '\0' || type[0] == '?' || type[0] == '@';
+    if (!objectOrKnownSwiftField) return nil;
+
+    status = object_getIvar(item, statusIvar);
+    return [status isKindOfClass:statusClass] ? status : nil;
+}
+
+// NeoFreeBird masks TFNTwitterStatus.promotedContent from the host while ad
+// hiding is enabled. TFNTwitterStatus.isPromoted calls that getter, so relying
+// on isPromoted alone turns a real ad into a false negative. Inspect the typed
+// backing ivar as well; it remains non-nil only for promoted statuses.
+static BOOL StatusItemPromotionDecision(id item, BOOL* statusResolved) {
+    id status = BHTStatusFromTimelineItem(item);
+    BOOL resolved = status != nil;
+    if (statusResolved) *statusResolved = resolved;
+    return resolved &&
+           (ItemHasPromotedContent(status) ||
+            BHTBoolForSelector(status, @selector(isPromoted)));
 }
 
 static BOOL ItemHasPromotedTrendID(id item) {
