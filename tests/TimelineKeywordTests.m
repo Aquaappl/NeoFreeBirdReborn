@@ -53,6 +53,14 @@ static NSUInteger BHTScribeComponentReadCount = 0;
 }
 @end
 
+@interface TFNDataViewItem : NSObject
+@property(nonatomic, strong) id item;
+@property(nonatomic, copy) id objectIdentifier;
+@property(nonatomic, strong) id sectionController;
+@end
+@implementation TFNDataViewItem
+@end
+
 @interface TFNTwitterTweetTopicFeedbackContext : NSObject
 @end
 @implementation TFNTwitterTweetTopicFeedbackContext
@@ -126,6 +134,9 @@ int main(void) {
                        BHTTimelineCleanupKindTopicPost) != 0,
                   @"X 12.24.1 topic feedback metadata identifies Topic posts");
         status.tweetContext = nil;
+        NSCAssert((BHTTimelineCleanupKindsForItem(item) &
+                       BHTTimelineCleanupKindTopicPost) == 0,
+                  @"Hydrated Topic metadata is re-evaluated");
 
         BHTCountingTwitterStatus* countingStatus =
             [BHTCountingTwitterStatus new];
@@ -152,12 +163,13 @@ int main(void) {
                       countingItem,
                       BHTTimelineCleanupKindTopicPost),
                   @"Topic metadata is evaluated when requested");
-        NSCAssert(BHTShouldHideTimelineCleanupItemForKinds(
-                      countingItem,
-                      BHTTimelineCleanupKindTopicPost),
-                  @"Cached Topic classification stays hidden");
-        NSCAssert(BHTTopicContextReadCount == 1,
-                  @"Timeline cleanup classifies each immutable item once");
+        countingStatus.tweetContext = nil;
+        NSCAssert(!BHTShouldHideTimelineCleanupItemForKinds(
+                       countingItem,
+                       BHTTimelineCleanupKindTopicPost),
+                  @"Reused items cannot keep a stale Topic decision");
+        NSCAssert(BHTTopicContextReadCount == 2,
+                  @"Current Topic metadata is checked on each delivery");
 
         BHTCountingCleanupModule* cleanupModule =
             [BHTCountingCleanupModule new];
@@ -167,12 +179,28 @@ int main(void) {
                       cleanupModule,
                       BHTTimelineCleanupKindWhoToFollow),
                   @"Who-to-follow module controllers are classified");
+        cleanupModule->_scribeComponent = @"ordinary_profile_module";
+        NSCAssert(!BHTShouldHideTimelineCleanupItemForKinds(
+                       cleanupModule,
+                       BHTTimelineCleanupKindWhoToFollow),
+                  @"Reused module controllers cannot keep a stale decision");
+        NSCAssert(BHTScribeComponentReadCount == 2,
+                  @"Current module identifiers are re-evaluated");
+
+        TFNDataViewItem* wrappedModuleItem = [TFNDataViewItem new];
+        wrappedModuleItem.item = [NSObject new];
+        wrappedModuleItem.sectionController = cleanupModule;
+        cleanupModule->_scribeComponent = @"suggest_who_to_follow";
         NSCAssert(BHTShouldHideTimelineCleanupItemForKinds(
-                      cleanupModule,
+                      wrappedModuleItem,
                       BHTTimelineCleanupKindWhoToFollow),
-                  @"Cached module classification stays hidden");
-        NSCAssert(BHTScribeComponentReadCount == 1,
-                  @"Module identifiers are inspected only once");
+                  @"Paginated wrapper section identity hides module chrome");
+        cleanupModule->_scribeComponent = @"ordinary_profile_module";
+        wrappedModuleItem.objectIdentifier = @"who-to-follow-page-2";
+        NSCAssert(BHTShouldHideTimelineCleanupItemForKinds(
+                      wrappedModuleItem,
+                      BHTTimelineCleanupKindWhoToFollow),
+                  @"Wrapper object identifiers are classified before unwrapping");
 
         NSCAssert(!hidden(item), @"Ordinary posts remain visible");
         status.canonicalStatus = [TFNTwitterCanonicalStatus new];
@@ -195,12 +223,12 @@ int main(void) {
                   @"A delivered ordinary item remains visible");
         snapshotStatus.canonicalStatus.originalText =
             @"@grok newly hydrated";
-        NSCAssert(!hiddenForContentGeneration(
-                       snapshotItem, timelineOwner, 1),
-                  @"Repeated layout callbacks reuse the delivered snapshot");
+        NSCAssert(hiddenForContentGeneration(
+                      snapshotItem, timelineOwner, 1),
+                  @"Hydrated text invalidates a same-generation no-match");
         NSCAssert(hiddenForContentGeneration(
                       snapshotItem, timelineOwner, 2),
-                  @"A later section generation sees hydrated text");
+                  @"A later section generation keeps the current match");
 
         [BHTForYouKeywordFilter setKeywords:@[] forKind:BHTForYouKeywordFilterKindUsername error:nil];
         [BHTForYouKeywordFilter setKeywords:@[@"grok"] forKind:BHTForYouKeywordFilterKindPostText error:nil];
@@ -244,7 +272,7 @@ int main(void) {
         NSCAssert([BHTLikesNavigationUtility originalIndexForVisibleIndex:3 originalCount:4] == NSNotFound, @"Out of range is rejected");
         [BHTLikesNavigationUtility resetSelection];
         NSCAssert([[BHTLikesNavigationUtility visiblePageIDsInOrder] isEqualToArray:destinations], @"Restore defaults restores every native destination");
-        puts("PASS: original text, mention metadata, cleanup caching, hydration/cache edits, row types, quoted-text isolation, filter removal, and Likes destination mapping");
+        puts("PASS: original text, mention metadata, paginated cleanup identity, hydrated-state rechecks, row types, quoted-text isolation, filter removal, and Likes destination mapping");
     }
     return 0;
 }

@@ -6,18 +6,12 @@
 #include <stdatomic.h>
 #include <string.h>
 
-// URT view models and section controllers are immutable after X delivers
-// them. Cache their cleanup classification because table/collection layout
-// can ask about the same object many times during a single scroll.
-static char kBHTTimelineCleanupClassificationKey;
 static const NSUInteger BHTTimelineCleanupKindMask =
     BHTTimelineCleanupKindWhoToFollow |
     BHTTimelineCleanupKindPrompt |
     BHTTimelineCleanupKindDiscoverMore |
     BHTTimelineCleanupKindTopicPost |
     BHTTimelineCleanupKindTopicSuggestion;
-static const NSUInteger BHTTimelineCleanupIdentifiersEvaluated = 1 << 8;
-static const NSUInteger BHTTimelineCleanupTopicEvaluated = 1 << 9;
 static atomic_uint_fast64_t BHTTimelineCleanupSettingsGeneration =
     ATOMIC_VAR_INIT(0);
 static atomic_uint_fast32_t BHTTimelineCleanupSettingsKinds =
@@ -66,6 +60,24 @@ static NSString* BHTCleanupStringValue(id object, NSString* name) {
     id value = BHTCleanupObjectValue(
         object, NSSelectorFromString(name), name.UTF8String, NO);
     return [value isKindOfClass:NSString.class] ? value : nil;
+}
+
+static BHTTimelineCleanupKind BHTCleanupIdentifierKindsForObject(
+    id object) {
+    if (!object) return BHTTimelineCleanupKindNone;
+
+    BHTTimelineCleanupKind kinds =
+        BHTTimelineCleanupKindsForIdentifiers(
+            NSStringFromClass([object classForCoder]),
+            BHTCleanupStringValue(object, @"scribeComponent"),
+            BHTCleanupStringValue(object, @"entryID"));
+    NSString* objectIdentifier =
+        BHTCleanupStringValue(object, @"objectIdentifier");
+    if (objectIdentifier.length > 0) {
+        kinds |= BHTTimelineCleanupKindsForIdentifiers(
+            nil, nil, objectIdentifier);
+    }
+    return kinds;
 }
 
 static id BHTCleanupUnwrapItem(id item) {
@@ -275,60 +287,41 @@ static BOOL BHTCleanupItemHasTopicContext(id item) {
            [contextClass hasSuffix:@"TweetTopicFeedbackContext"];
 }
 
-static NSUInteger BHTCleanupCachedStateForItem(
+static BHTTimelineCleanupKind BHTCleanupKindsForCurrentItemState(
     id item, BOOL includeTopicContext) {
-    if (!item) return BHTTimelineCleanupIdentifiersEvaluated |
-                      (includeTopicContext
-                           ? BHTTimelineCleanupTopicEvaluated
-                           : 0);
+    if (!item) return BHTTimelineCleanupKindNone;
 
-    NSNumber* cached = objc_getAssociatedObject(
-        item, &kBHTTimelineCleanupClassificationKey);
-    NSUInteger state = [cached isKindOfClass:NSNumber.class]
-                           ? cached.unsignedIntegerValue
-                           : 0;
-    NSUInteger originalState = state;
     id viewModel = BHTCleanupUnwrapItem(item);
+    BHTTimelineCleanupKind kinds =
+        BHTCleanupIdentifierKindsForObject(viewModel);
 
-    if (!(state & BHTTimelineCleanupIdentifiersEvaluated)) {
-        BHTTimelineCleanupKind kinds =
-            BHTTimelineCleanupKindsForIdentifiers(
-                NSStringFromClass([viewModel classForCoder]),
-                BHTCleanupStringValue(viewModel, @"scribeComponent"),
-                BHTCleanupStringValue(viewModel, @"entryID"));
+    if (viewModel != item) {
+        kinds |= BHTCleanupIdentifierKindsForObject(item);
 
-        if (viewModel != item) {
-            kinds |= BHTTimelineCleanupKindsForIdentifiers(
-                NSStringFromClass([item classForCoder]),
-                BHTCleanupStringValue(item, @"scribeComponent"),
-                BHTCleanupStringValue(item, @"entryID"));
-        }
-        state |= kinds | BHTTimelineCleanupIdentifiersEvaluated;
+        // X 12.24.1's paginated profile modules keep their server component
+        // on TFNDataViewItem.sectionController. The visible Swift header and
+        // carousel view models themselves have no Objective-C identifier
+        // accessors, so preserving and checking the wrapper is essential.
+        id sectionController = BHTCleanupObjectValue(
+            item, NSSelectorFromString(@"sectionController"),
+            "sectionController", NO);
+        kinds |= BHTCleanupIdentifierKindsForObject(sectionController);
     }
 
-    // Topic inspection traverses status metadata and is the expensive part of
-    // classification. Do it only when the Topic-post toggle can use it, then
-    // remember both positive and negative results.
-    if (includeTopicContext &&
-        !(state & BHTTimelineCleanupTopicEvaluated)) {
+    // X hydrates and can reuse timeline objects after their first sizing pass.
+    // Re-read the current identifiers and topic state on each delivered pass;
+    // caching a negative result can let later pages, ads, or Topic posts escape.
+    if (includeTopicContext) {
         if (BHTCleanupItemHasTopicContext(viewModel)) {
-            state |= BHTTimelineCleanupKindTopicPost;
+            kinds |= BHTTimelineCleanupKindTopicPost;
         }
-        state |= BHTTimelineCleanupTopicEvaluated;
     }
-
-    if (!cached || state != originalState) {
-        objc_setAssociatedObject(
-            item, &kBHTTimelineCleanupClassificationKey, @(state),
-            OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-    }
-    return state;
+    return kinds;
 }
 
 BHTTimelineCleanupKind BHTTimelineCleanupKindsForItem(id item) {
-    return (BHTTimelineCleanupKind)(
-        BHTCleanupCachedStateForItem(item, YES) &
-        BHTTimelineCleanupKindMask);
+    return BHTCleanupKindsForCurrentItemState(item, YES) &
+           BHTTimelineCleanupKindMask;
 }
 
 BHTTimelineCleanupKind BHTEnabledTimelineCleanupKinds(void) {
@@ -370,7 +363,7 @@ BOOL BHTShouldHideTimelineCleanupItemForKinds(
     if (!item || enabledKinds == BHTTimelineCleanupKindNone) return NO;
     BOOL includeTopicContext =
         (enabledKinds & BHTTimelineCleanupKindTopicPost) != 0;
-    NSUInteger state = BHTCleanupCachedStateForItem(
+    BHTTimelineCleanupKind state = BHTCleanupKindsForCurrentItemState(
         item, includeTopicContext);
     return (state & enabledKinds & BHTTimelineCleanupKindMask) != 0;
 }

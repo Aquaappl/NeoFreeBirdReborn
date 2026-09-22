@@ -5,6 +5,7 @@
 
 #import "HookHelpers.h"
 #import "Compatibility/BHTCompatibilityReporter.h"
+#import "Likes/BHTLikesTab.h"
 #import "Timeline/BHTForYouKeywordFilter.h"
 #import "Timeline/BHTTimelineCleanup.h"
 #import <stddef.h>
@@ -1084,17 +1085,6 @@ static BOOL ShouldHideForYouKeywordItem(
     BHTForYouKeywordDecisionCache* cached =
         objc_getAssociatedObject(outerStatus,
                                  &kBHTForYouKeywordDecisionKey);
-    if (timelineOwner &&
-        [cached
-            isKindOfClass:BHTForYouKeywordDecisionCache.class] &&
-        cached.generation == generation &&
-        cached.timelineOwner == timelineOwner &&
-        cached.contentGeneration == contentGeneration) {
-        BHTRecordForYouFilterDiagnostic(
-            BHTForYouFilterDiagnosticDecisionCacheHit);
-        return cached.hidden;
-    }
-
     NSArray<NSString*>* postTextCandidates =
         hasUsernameFilters || hasPostTextFilters
             ? PostTextCandidates(representedStatus)
@@ -1112,11 +1102,9 @@ static BOOL ShouldHideForYouKeywordItem(
                   postTextCandidates)
             : @[];
 
-    // A delivered section is stable across its many sizing/cell callbacks, so
-    // the owner/content generation fast path above avoids rebuilding text and
-    // mention candidates while scrolling. X can hydrate or replace text in a
-    // later section update; that advances contentGeneration. The exact-input
-    // comparison remains as a safe fallback for direct/non-controller use.
+    // X can hydrate a delivered status or reuse its view model without a new
+    // section callback. Compare the current trusted inputs before reusing a
+    // result so an early no-match cannot bypass a later keyword match.
     if ([cached
             isKindOfClass:BHTForYouKeywordDecisionCache.class] &&
         cached.generation == generation &&
@@ -1175,12 +1163,12 @@ static BOOL ShouldHideTimelineItem(id item,
                                    BOOL hasPostTextFilters,
                                    id timelineOwner,
                                    NSUInteger contentGeneration) {
-    id viewModel = unwrapDataViewItem(item);
-    if (BHTShouldHideTimelineCleanupItemForKinds(viewModel,
+    if (BHTShouldHideTimelineCleanupItemForKinds(item,
                                                  cleanupKinds)) {
         return YES;
     }
 
+    id viewModel = unwrapDataViewItem(item);
     if (filterForYouKeywords &&
         ShouldHideForYouKeywordItem(
             viewModel, keywordFilterGeneration, hasUsernameFilters,
@@ -1400,7 +1388,11 @@ static BOOL BHTShouldCollapseTimelineModule(id controller) {
 
 - (void)setSections:(NSArray*)sections restoreScrollPosition:(BOOL)restoreScrollPosition {
     BHTAdvanceTimelineContentGeneration(self);
-    %orig(FilteredTimelineSections(self, sections), restoreScrollPosition);
+    NSArray* filtered = BHTFilteredTimelineSections(self, sections);
+    filtered = FilteredTimelineSections(self, filtered);
+    BOOL isLikes = BHTCaptureLikesSections((UIViewController*)self,
+                                           filtered);
+    %orig(filtered, isLikes ? NO : restoreScrollPosition);
 }
 
 - (void)updateSections:(NSArray*)sections
@@ -1408,7 +1400,10 @@ static BOOL BHTShouldCollapseTimelineModule(id controller) {
               withRowAnimation:(long long)animation
                     completion:(id)completion {
     BHTAdvanceTimelineContentGeneration(self);
-    %orig(FilteredTimelineSections(self, sections), identifiers, animation, completion);
+    NSArray* filtered = BHTFilteredTimelineSections(self, sections);
+    filtered = FilteredTimelineSections(self, filtered);
+    BHTCaptureLikesSections((UIViewController*)self, filtered);
+    %orig(filtered, identifiers, animation, completion);
 }
 
 %end

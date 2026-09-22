@@ -12,7 +12,6 @@
 static char kBHTHiddenAdCellKey;
 static char kBHTRecordedAdCellKey;
 static char kBHTPromotionClassDecisionKey;
-static char kBHTTimelineFilterDecisionKey;
 static atomic_uint_fast64_t kBHTTimelineFilterSettingsGeneration =
     ATOMIC_VAR_INIT(0);
 static atomic_uint_fast32_t kBHTTimelineFilterSettingsSignature =
@@ -372,34 +371,17 @@ static BOOL ShouldHideAndRecordWithSignature(
     id unwrapped = unwrapDataViewItem(item);
     if (!unwrapped) return NO;
 
-    // URT timeline view models are immutable after delivery, but X asks about
-    // the same item from section filtering, adapter lookup, cell creation, and
-    // row sizing. Cache the decision per filter settings/location so expensive
-    // Swift/KVC promotion inspection runs once per item instead of per pass.
-    NSString* cacheLocation = location ?: @"";
-    NSDictionary* cachedDecisions =
-        objc_getAssociatedObject(unwrapped, &kBHTTimelineFilterDecisionKey);
-    NSNumber* packedDecision = cachedDecisions[cacheLocation];
-    if (packedDecision &&
-        (packedDecision.unsignedIntegerValue >> 1) == settingsSignature) {
-        return (packedDecision.unsignedIntegerValue & 1u) != 0;
-    }
-
+    // X can hydrate or reuse a view model after its first sizing callback.
+    // Re-evaluate its current promotion fields so an early negative decision
+    // cannot let a later-page ad pass through. The settings bitmask and class
+    // decisions remain cached, and the normal structural path runs before the
+    // item reaches scrolling/layout callbacks.
     BOOL hidden = ShouldHideItem(
         unwrapped, location, settingsSignature);
     BHTRecordTimelineItemObservation(item, location, hidden);
     if (unwrapped != item) {
         BHTRecordTimelineItemObservation(unwrapped, location, hidden);
     }
-
-    NSMutableDictionary* updatedDecisions =
-        cachedDecisions ? [cachedDecisions mutableCopy]
-                        : [NSMutableDictionary dictionaryWithCapacity:1];
-    updatedDecisions[cacheLocation] =
-        @((settingsSignature << 1) | (hidden ? 1u : 0u));
-    objc_setAssociatedObject(unwrapped, &kBHTTimelineFilterDecisionKey,
-                             [updatedDecisions copy],
-                             OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     return hidden;
 }
 
@@ -471,20 +453,6 @@ static id BHTItemAtIndexPath(TFNItemsDataViewController* controller,
 }
 
 %hook TFNItemsDataViewController
-
-- (void)setSections:(NSArray*)sections
-    restoreScrollPosition:(BOOL)restoreScrollPosition {
-    %orig(BHTFilteredTimelineSections(self, sections),
-          restoreScrollPosition);
-}
-
-- (void)updateSections:(NSArray*)sections
-    reconfigureItemIdentifiers:(NSArray*)identifiers
-              withRowAnimation:(long long)animation
-                    completion:(id)completion {
-    %orig(BHTFilteredTimelineSections(self, sections), identifiers,
-          animation, completion);
-}
 
 // Some X 12.9 timelines keep their section model opaque and only expose the
 // resolved item while constructing a table cell. This is the proven fallback

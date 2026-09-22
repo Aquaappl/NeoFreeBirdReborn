@@ -4275,11 +4275,11 @@ def main() -> None:
             "navigation delegate"
         )
 
-    if "Version: 6.1.0-beta.60" not in (
+    if "Version: 6.1.0-beta.61" not in (
         ROOT / "control"
     ).read_text(encoding="utf-8"):
         raise AssertionError(
-            "Profile module cleanup and scroll caching must ship as beta.60"
+            "Paginated timeline filtering fixes must ship as beta.61"
         )
 
     require_source_tokens(
@@ -5307,6 +5307,9 @@ def main() -> None:
             "Likes navigation must not discard native drawer destinations"
         )
 
+    timeline_source = (
+        ROOT / "src" / "Hooks" / "Timeline.x"
+    ).read_text(encoding="utf-8")
     ads_source = (
         ROOT / "src" / "Hooks" / "Ads.x"
     ).read_text(encoding="utf-8")
@@ -5323,13 +5326,30 @@ def main() -> None:
         "shared filtered timeline snapshot",
     )
     if (
-        likes_hook_source.count(
+        timeline_source.count(
             "BHTFilteredTimelineSections(self, sections)"
         )
         < 2
     ):
         raise AssertionError(
-            "Likes waterfall capture must filter both section update paths"
+            "The single timeline owner must filter both section update paths"
+        )
+    if timeline_source.count("BHTCaptureLikesSections(") < 2:
+        raise AssertionError(
+            "The single timeline owner must capture both filtered Likes updates"
+        )
+    if "BHTFilteredTimelineSections(self, sections)" in likes_hook_source:
+        raise AssertionError(
+            "Likes must not repeat the shared structural filter pass"
+        )
+    if "BHTFilteredTimelineSections(self, sections)" in source_section(
+        ads_source,
+        "%hook TFNItemsDataViewController",
+        "%hook TFNItemsDataViewAdapterRegistry",
+        "opaque ad-render fallback",
+    ):
+        raise AssertionError(
+            "The ad render fallback must not repeat the structural filter pass"
         )
 
     for_you_filter_source = (
@@ -5503,8 +5523,7 @@ def main() -> None:
             "BHTForYouKeywordDecisionCache",
             "objc_getAssociatedObject(outerStatus",
             "cached.generation == generation",
-            "cached.timelineOwner == timelineOwner",
-            "cached.contentGeneration == contentGeneration",
+            "X can hydrate a delivered status",
             "isEqualToArray:usernameCandidates",
             "isEqualToArray:postTextCandidates",
             "return cached.hidden",
@@ -5513,15 +5532,17 @@ def main() -> None:
             "BHTForYouFilterDiagnosticTrustedTextCandidateSetNonEmpty",
             "UsernameCandidatesForStatuses(",
         ),
-        "section-generation-aware For You keyword decision caching",
+        "current-content-aware For You keyword decision caching",
     )
-    if keyword_decision_cache.find(
-        "cached.contentGeneration == contentGeneration"
-    ) > keyword_decision_cache.find("PostTextCandidates("):
-        raise AssertionError(
-            "Repeated row layout must hit the keyword cache before rebuilding "
-            "post-text candidates"
-        )
+    for stale_fast_path in (
+        "cached.timelineOwner == timelineOwner",
+        "cached.contentGeneration == contentGeneration",
+    ):
+        if stale_fast_path in keyword_decision_cache:
+            raise AssertionError(
+                "For You keyword filtering must compare the current trusted "
+                "content before reusing a cached decision"
+            )
     if not re.search(
         r"UsernameCandidatesForStatuses\s*\(\s*"
         r"outerStatus\s*,\s*representedStatus\s*,\s*"
@@ -5558,22 +5579,22 @@ def main() -> None:
             "TFNTwitterTweetTopicFeedbackContext",
             "list_creation_recommended_users_timeline",
             "list_edit_recommended_users_timeline",
-            "kBHTTimelineCleanupClassificationKey",
-            "BHTTimelineCleanupIdentifiersEvaluated",
-            "BHTTimelineCleanupTopicEvaluated",
+            '@"objectIdentifier"',
+            '@"sectionController"',
+            "BHTCleanupIdentifierKindsForObject(sectionController)",
+            "BHTCleanupKindsForCurrentItemState",
             "includeTopicContext",
-            "objc_getAssociatedObject",
-            "objc_setAssociatedObject",
             "BHTTimelineCleanupSettingsGeneration",
             "[BHTSettings preferenceGeneration]",
         ),
-        "cached X 12.24.1 cleanup identifiers and gated Topic metadata",
+        "current X 12.24.1 wrapper identifiers and gated Topic metadata",
     )
     require_source_tokens(
         timeline_source,
         (
             "BHTEnabledTimelineCleanupKinds()",
             "BHTShouldHideTimelineCleanupItemForKinds",
+            "BHTShouldHideTimelineCleanupItemForKinds(item,",
             "BHTShouldHideTimelineCleanupItem(item)",
             "cleanupFiltersChanged",
             "%hook T1URTTimelineModuleViewModelSectionController",
@@ -5613,6 +5634,11 @@ def main() -> None:
                 f"containment: {obsolete_context_gate}"
             )
 
+    if "kBHTTimelineCleanupClassificationKey" in timeline_cleanup_source:
+        raise AssertionError(
+            "Hydrated or reused timeline items must not keep cleanup decisions"
+        )
+
     ads_source = (
         ROOT / "src" / "Hooks" / "Ads.x"
     ).read_text(encoding="utf-8")
@@ -5628,6 +5654,10 @@ def main() -> None:
         ),
         "cached ad-filter settings and bounded status inspection",
     )
+    if "kBHTTimelineFilterDecisionKey" in ads_source:
+        raise AssertionError(
+            "Hydrated or reused timeline items must not keep ad decisions"
+        )
     if ads_source.count("BHTShouldHideTimelineCleanupItem") < 2:
         raise AssertionError(
             "Opaque timeline rows must apply cleanup during cell creation "
